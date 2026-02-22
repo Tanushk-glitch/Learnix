@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Account | Learnix</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">
+      <span class="logo-text">Learnix</span>
+    </div>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="home_page.html">Home</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <a href="/logout" class="get-started">Logout</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="transform-banner">
+        <span>Account</span>
+      </div>
+      <h1>
+        My <span class="journey">Profile</span>
+      </h1>
+      <div class="profile-page-card">
+        <p><strong>User Name:</strong> <span id="profileName">Loading...</span></p>
+        <p><strong>Email ID:</strong> <span id="profileEmail">Loading...</span></p>
+      </div>
+      <a href="/dashboard" class="get-started-free">Back to Dashboard</a>
+    </section>
+  </main>
+
+  <script>
+    async function loadProfile() {
+      try {
+        const response = await fetch("/api/me");
+        if (!response.ok) {
+          throw new Error("Not authenticated");
+        }
+
+        const user = await response.json();
+        document.getElementById("profileName").textContent = user.username || "User";
+        document.getElementById("profileEmail").textContent = user.email || "";
+      } catch (error) {
+        window.location.href = "/login.html";
+      }
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>

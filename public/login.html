@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Learnix</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+<header class="navbar">
+    <div class="logo">
+        <span class="logo-icon">📖</span>
+        <span class="logo-text">Learnix</span>
+    </div>
+
+    <nav>
+        <ul class="nav-links">
+            <li><a href="home_page.html">Home</a></li>
+            <li><a href="#">Features</a></li>
+            <li><a href="Courses.html">Courses</a></li>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Contact</a></li>
+        </ul>
+    </nav>
+
+    <div class="nav-actions">
+        <a href="login.html" class="sign-in">Log in</a>
+        <a href="home_page.html" class="get-started">Get Started</a>
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <div class="transform-banner">
+            <span>Welcome Back</span>
+        </div>
+
+        <h1>
+            <span class="journey">Login</span> to
+            <span class="today">Learnix</span>
+        </h1>
+
+        <p class="subtitle">
+            Continue your learning journey by signing in to your account.
+        </p>
+
+        <form class="demo-form" action="/login"  method="post" >
+            <input type="email" name="username" placeholder="Email Address" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit" class="get-started-free">Log in</button>
+        </form>
+
+        <div id="loginSuccess" style="display:none; color:#22c55e; margin-top:18px; font-weight:600;">
+            Login successful! Welcome to Learnix.
+        </div>
+    </section>
+</main>
+
+<footer>
+    <p>&copy; 2023 Learnix. All rights reserved.</p>
+</footer>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    document.getElementById('loginSuccess').style.display = 'block';
+    this.reset();
+});
+</script>
+
+</body>
+</html>

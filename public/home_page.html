@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learnix Landing Page</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+<header class="navbar">
+    <div class="logo">
+        <span class="logo-icon">📖</span>
+        <span class="logo-text">Learnix</span>
+    </div>
+
+    <nav>
+        <ul class="nav-links">
+            <li><a href="#">Features</a></li>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Contact</a></li>
+        </ul>
+    </nav>
+
+    <div class="nav-actions">
+        <!-- ✅ LOG IN NOW OPENS LOGIN PAGE -->
+        <a href="login.html" class="sign-in">Log in</a>
+        <a href="sign_up.html" class="sign-up" style="text-decoration:none;display:inline-block;">Sign Up</a>
+     
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <div class="transform-banner">
+            <span>Ready to Transform Your Learning?</span>
+        </div>
+
+        <h1>
+            Start Your Learning<br>
+            <span class="journey">Journey</span>
+            <span class="today">Today</span>
+        </h1>
+
+        <p class="subtitle">
+            Join thousands of successful students who have transformed their careers
+            and achieved their goals through our innovative remote learning platform.
+        </p>
+
+        <div class="cta-buttons">
+            <a href="login.html" class="get-started-free" style="text-decoration:none;display:inline-block;">
+                Get Started Free
+            </a>
+            <a href="demo.html" class="schedule-demo" style="text-decoration:none;display:inline-block;">
+                Schedule a Demo
+            </a>
+        </div>
+
+        <div class="trial-info">
+            No credit card required &bull; 30-day free trial &bull; Cancel anytime
+        </div>
+    </section>
+</main>
+
+<!-- Why Choose Learnix Section -->
+<section class="section why-learnix-section">
+    <div class="why-learnix-header">
+        <div class="premium-badge">
+            <span>✨ Premium Features</span>
+        </div>
+        <h1 class="why-learnix-title">
+            Why Choose <span class="learnix-gradient">Learnix</span><span class="why-q">?</span>
+        </h1>
+        <p class="why-learnix-desc">
+            Experience the future of education with our cutting-edge remote learning platform
+            designed to deliver exceptional educational outcomes.
+        </p>
+    </div>
+
+    <div class="why-learnix-cards">
+        <div class="why-card">
+            <div class="why-icon why-icon-blue">
+                <span style="font-size:1.7rem;">&#128249;</span>
+            </div>
+            <h3>Live Virtual Classes</h3>
+            <p>
+                Interactive HD video sessions with real-time collaboration and screen sharing capabilities.
+            </p>
+        </div>
+
+        <div class="why-card">
+            <div class="why-icon why-icon-green">
+                <span style="font-size:1.7rem;">&#128104;&#8205;&#127979;</span>
+            </div>
+            <h3>Expert Instructors</h3>
+            <p>
+                Learn from industry professionals and certified educators with years of teaching experience.
+            </p>
+        </div>
+
+        <div class="why-card">
+            <div class="why-icon why-icon-orange">
+                <span style="font-size:1.7rem;">&#128101;</span>
+            </div>
+            <h3>Smart Attendance Tracking</h3>
+            <p>
+                Automated attendance monitoring with detailed analytics and engagement metrics for better learning outcomes.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="text-align:center;">
+    <h2>Contact Us</h2>
+    <p>Name: Yash Chaphekar</p>
+    <p>
+        Phone:
+        <a href="tel:8433661025" style="color:#2563eb;text-decoration:none;">
+            8433661025
+        </a>
+    </p>
+</section>
+
+<footer>
+    <p>&copy; 2023 Learnix. All rights reserved.</p>
+</footer>
+
+<script src="scripts/main.js"></script>
+
+<script>
+document.querySelector('.schedule-demo').addEventListener('click', function() {
+    window.location.href = 'demo.html';
+});
+
+// Contact modal
+document.querySelectorAll('.nav-links a')[3].addEventListener('click', function(e) {
+    e.preventDefault();
+
+    if (!document.getElementById('contactModal')) {
+        const modal = document.createElement('div');
+        modal.id = 'contactModal';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.background = 'rgba(0,0,0,0.4)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '9999';
+
+        modal.innerHTML = `
+            <div style="background:#fff;padding:32px 24px;border-radius:12px;max-width:350px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,0.15);">
+                <h2>Contact Us</h2>
+                <p><strong>Name:</strong> Yash Chaphekar</p>
+                <p><strong>Phone:</strong> <a href="tel:8433661025" style="color:#2563eb;text-decoration:none;">8433661025</a></p>
+                <p><strong>Address:</strong> 123 Learnix Avenue, Pune, Maharashtra, 411001</p>
+                <button id="closeContactModal" style="margin-top:18px;padding:8px 24px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;">
+                    Close
+                </button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('closeContactModal').onclick = () => modal.remove();
+    }
+});
+
+// Sign-up modal
+document.querySelector('.sign-up').addEventListener('click', function() {
+    if (!document.getElementById('signupModal')) {
+        const modal = document.createElement('div');
+        modal.id = 'signupModal';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.background = 'rgba(0,0,0,0.4)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '9999';
+
+        modal.innerHTML = `
+            <div style="background:#fff;padding:32px 24px;border-radius:12px;max-width:350px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,0.15);">
+                <h2>Sign Up</h2>
+                <form id="signupForm" style="display:flex;flex-direction:column;gap:14px;margin-top:18px;">
+                    <input type="text" placeholder="Full Name" required style="padding:10px;border-radius:6px;border:1px solid #e0edff;">
+                    <input type="email" placeholder="Email Address" required style="padding:10px;border-radius:6px;border:1px solid #e0edff;">
+                    <input type="password" placeholder="Password" required style="padding:10px;border-radius:6px;border:1px solid #e0edff;">
+                    <button type="submit" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;">
+                        Sign Up
+                    </button>
+                </form>
+                <div id="signupSuccess" style="display:none;color:#22c55e;margin-top:16px;font-weight:600;">
+                    Sign up successful! Welcome to Learnix.
+                </div>
+                <button id="closeSignupModal" style="margin-top:18px;padding:8px 24px;background:#2563eb;color:#fff;border:none;border-radius:6px;">
+                    Close
+                </button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('closeSignupModal').onclick = () => modal.remove();
+
+        document.getElementById('signupForm').onsubmit = function(e) {
+            e.preventDefault();
+            document.getElementById('signupSuccess').style.display = 'block';
+            this.reset();
+        };
+    }
+});
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>              
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learnix Login</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>          
