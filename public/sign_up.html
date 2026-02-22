@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | Learnix</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+<header class="navbar">
+    <div class="logo">
+        <span class="logo-icon">📖</span>
+        <span class="logo-text">Learnix</span>
+    </div>
+
+    <nav>
+        <ul class="nav-links">
+            <li><a href="home_page.html">Home</a></li>
+            <li><a href="#">Features</a></li>
+            <li><a href="Courses.html">Courses</a></li>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Contact</a></li>
+        </ul>
+    </nav>
+
+    <div class="nav-actions">
+        <a href="login.html" class="sign-in">Log in</a>
+        <a href="home_page.html" class="get-started">Back to Home</a>
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <div class="transform-banner">
+            <span>Join Our Community</span>
+        </div>
+
+        <h1>
+            Create Your
+            <span class="journey">Learnix</span>
+            <span class="today">Account</span>
+        </h1>
+
+        <p class="subtitle">
+            Start your free learning journey today. No credit card required.
+        </p>
+
+        <form class="demo-form" action="/signup" method="post" >
+            <input type="text" name="username" placeholder="Full Name" required>
+            <input type="email" name="email" placeholder="Email Address" required>
+            <input type="password" name="password" placeholder="Password (min. 6 characters)" required >
+            <input type="password" name="confirmPassword" placeholder="Confirm Password" required > 
+            <button type="submit" class="get-started-free">Create Account</button>
+        </form>
+
+        <div id="signupSuccess" style="display:none; color:#22c55e; margin-top:18px; font-weight:600;">
+            Account created successfully! Welcome to Learnix. Redirecting...
+        </div>
+
+        <p style="text-align:center; margin-top:20px; color:#666;">
+            Already have an account? <a href="login.html" style="color:#2563eb; text-decoration:none; font-weight:600;">Log in here</a>
+        </p>
+    </section>
+</main>
+
+<footer>
+    <p>&copy; 2023 Learnix. All rights reserved.</p>
+</footer>
+
+
+
+</body>
+</html>

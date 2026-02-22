@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sample Video | Learnix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    :root {
+      --primary-blue: #2563eb;
+      --primary-green: #22c55e;
+      --text-dark: #1f2937;
+      --text-light: #6b7280;
+      --bg-light: #f8fbff;
+      --card-bg: #ffffff;
+      --border-radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: var(--bg-light);
+      color: var(--text-dark);
+    }
+
+    /* ---------- HEADER ---------- */
+    header {
+      background: #fff;
+      padding: 18px 8%;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary-green);
+    }
+
+    .logo-icon {
+      font-size: 1.6rem;
+      margin-right: 8px;
+    }
+
+    nav a {
+      margin-left: 24px;
+      text-decoration: none;
+      color: var(--text-dark);
+      font-weight: 500;
+    }
+
+    /* ---------- HERO ---------- */
+    .hero {
+      text-align: center;
+      padding: 70px 10%;
+      background: linear-gradient(to bottom, #f4f9ff, #ffffff);
+    }
+
+    .hero span {
+      background: #e8f1ff;
+      color: var(--primary-blue);
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 14px;
+      display: inline-block;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    .hero p {
+      color: var(--text-light);
+      max-width: 700px;
+      margin: auto;
+    }
+
+    /* ---------- VIDEO SECTION ---------- */
+    .video-section {
+        padding: 60px 6%;
+        display: grid;
+        grid-template-columns: 28% 44% 28%;
+        gap: 28px;
+        align-items: start;
+      }
+
+      .summary-section {
+        background: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        padding: 24px;
+        min-height: 220px;
+        overflow: auto;
+      }
+
+      .video-container {
+        background: transparent;
+      }
+
+      .video-container .video-card {
+        max-width: 900px;
+        width: 100%;
+        margin: 0 auto;
+      }
+
+      .questions-section {
+        background: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        padding: 24px;
+        min-height: 220px;
+        overflow: auto;
+      }
+
+    .questions-section h3 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: var(--primary-blue);
+    }
+
+    .question-display {
+      margin-bottom: 20px;
+    }
+
+    .question-display h4 {
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: var(--text-dark);
+    }
+
+    .answer-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .submit-btn {
+      padding: 10px 20px;
+      background: var(--primary-green);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .submit-btn:hover {
+      background: #1e8e3e;
+    }
+
+    .feedback {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--primary-blue);
+    }
+
+    .feedback.wrong {
+      color: #dc2626;
+    }
+
+    .video-card h2 {
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .video-card p {
+      color: var(--text-light);
+      margin-bottom: 20px;
+    }
+
+    video {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      background: #000;
+    }
+
+    /* Responsive: stack columns on narrow screens */
+    @media (max-width: 900px) {
+      .video-section {
+        grid-template-columns: 1fr;
+        padding: 40px 6%;
+      }
+      .summary-section, .video-container, .questions-section {
+        min-height: auto;
+      }
+    }
+
+    .video-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .video-actions button {
+      padding: 12px 26px;
+      border-radius: 30px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .enroll-btn {
+      background: var(--primary-blue);
+      color: #fff;
+    }
+
+    .enroll-btn:hover {
+      background: #1e4fd8;
+    }
+
+    .back-btn {
+      background: #ffffff;
+      color: var(--primary-blue);
+      border: 2px solid var(--primary-blue);
+    }
+
+    .back-btn:hover {
+      background: #e8f1ff;
+    }
+
+    /* ---------- FOOTER ---------- */
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: var(--text-light);
+      background: #f1f5f9;
+      margin-top: 80px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo"><span class="logo-icon">📖</span> Learnix</div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="#">Features</a>
+    <a href="Courses.html">Courses</a>
+    <a href="#">About</a>
+    <a href="#">Contact</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <span>🎥 Sample Lecture</span>
+  <h1>UI / UX Design – Introduction</h1>
+  <p>Watch a preview of our teaching style and course content before enrolling.</p>
+</section>
+
+<section class="video-section">
+  <div class="summary-section">
+    <h3>AI Summary</h3>
+    <div id="summary-content">Click "Generate" to create a 2–3 paragraph summary based on the video.</div>
+    <div style="margin-top:12px; display:flex; gap:8px;">
+      <button id="generate-btn" class="enroll-btn">Generate Summary & Questions</button>
+      <button id="sample-btn" class="back-btn">Use Sample</button>
+    </div>
+  </div>
+
+  <div class="video-container">
+    <div class="video-card">
+      <h2>Course Overview</h2>
+      <p>This sample video gives you an overview of the UI / UX Design course structure, tools, and learning outcomes.</p>
+
+      <!-- Replace src with your video file or URL -->
+      <video id="course-video" controls poster="https://via.placeholder.com/900x500?text=Sample+Video">
+        <source id="video-source" src="UIUX.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+
+      <div class="video-actions">
+        <button class="enroll-btn" onclick="window.location.href='login.html'">Enroll Now</button>
+        <button class="back-btn" onclick="window.location.href='Courses.html'">Back to Courses</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="questions-section">
+    <h3>Quiz Questions</h3>
+    <div id="question-container">
+      <div class="question-display">
+        <h4 id="question-text">Question will appear here.</h4>
+        <input type="text" id="answer-input" class="answer-input" placeholder="Enter your answer">
+        <button id="submit-btn" class="submit-btn">Submit Answer</button>
+        <div id="feedback" class="feedback"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  © 2023 Learnix. All rights reserved.
+</footer>
+
+<script>
+  // Questions will be provided by AI. Start with an empty array until generation.
+  let questions = [];
+
+  let currentQuestionIndex = 0;
+  let attempts = 0;
+  let totalCorrect = 0;
+
+  const questionText = document.getElementById('question-text');
+  const answerInput = document.getElementById('answer-input');
+  const submitBtn = document.getElementById('submit-btn');
+  const feedback = document.getElementById('feedback');
+
+  const generateBtn = document.getElementById('generate-btn');
+  const sampleBtn = document.getElementById('sample-btn');
+  const summaryContent = document.getElementById('summary-content');
+  const videoEl = document.getElementById('course-video');
+
+  async function generateFromServer() {
+    const src = document.getElementById('video-source').getAttribute('src');
+    summaryContent.textContent = 'Generating summary and questions...';
+    generateBtn.disabled = true;
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoUrl: src, maxQuestions: 5 })
+      });
+      if (!res.ok) throw new Error('Server error');
+      const data = await res.json();
+      summaryContent.innerHTML = data.summary_html || ('<p>' + (data.summary || 'No summary returned.') + '</p>');
+      if (Array.isArray(data.questions) && data.questions.length) {
+        questions = data.questions.map(q => ({ question: q.question, answer: q.answer }));
+        currentQuestionIndex = 0; totalCorrect = 0;
+        displayQuestion();
+      } else {
+        questions = [];
+        document.getElementById('question-text').textContent = 'No questions generated.';
+      }
+    } catch (err) {
+      summaryContent.textContent = 'Failed to generate: ' + err.message;
+    } finally {
+      generateBtn.disabled = false;
+    }
+  }
+
+  function useSample() {
+    summaryContent.innerHTML = '<p>This sample video introduces UI / UX Design — covering the fundamentals of user interface design and user experience principles. It explains the importance of creating designs that are both visually appealing and highly functional, and how good design directly impacts user satisfaction and retention.</p><p>The lecture covers essential topics such as wireframing, prototyping, user research methods, and design tools like Figma and Adobe XD. Learners are shown real-world examples of effective UI/UX design and introduced to design principles like consistency, feedback, and usability testing for creating better products.</p>';
+    questions = [
+      { question: 'What is UI design?', answer: 'UI design is the process of designing the visual elements of a user interface for software or websites.' },
+      { question: 'What does UX stand for?', answer: 'User Experience' },
+      { question: 'What are wireframes used for?', answer: 'To outline the structure and layout of a design before development.' }
+    ];
+    currentQuestionIndex = 0; totalCorrect = 0; displayQuestion();
+  }
+
+  generateBtn.addEventListener('click', generateFromServer);
+  sampleBtn.addEventListener('click', useSample);
+
+  function displayQuestion() {
+    if (currentQuestionIndex < questions.length) {
+      questionText.textContent = questions[currentQuestionIndex].question;
+      answerInput.value = '';
+      feedback.textContent = '';
+      feedback.className = 'feedback';
+      attempts = 0; // Reset attempts for new question
+      // Ensure input is visible and enabled for answering
+      answerInput.style.display = '';
+      answerInput.disabled = false;
+      submitBtn.style.display = '';
+      submitBtn.disabled = false;
+    } else {
+      if (questions.length === 0) {
+        questionText.textContent = 'No questions yet. Click "Generate Summary & Questions" to create quiz items.';
+        // keep the answer box visible but disabled so users know where to answer
+        answerInput.style.display = '';
+        answerInput.value = '';
+        answerInput.disabled = true;
+        submitBtn.style.display = '';
+        submitBtn.disabled = true;
+        feedback.textContent = '';
+      } else {
+        questionText.textContent = `Quiz completed! You got ${totalCorrect} out of ${questions.length} questions correct.`;
+        answerInput.style.display = '';
+        answerInput.disabled = true;
+        submitBtn.style.display = '';
+        submitBtn.disabled = true;
+        feedback.textContent = '';
+      }
+    }
+  }
+
+  function checkAnswer() {
+    const userAnswer = answerInput.value.trim().toLowerCase();
+    const correctAnswer = questions[currentQuestionIndex].answer.toLowerCase();
+
+    if (userAnswer === correctAnswer) {
+      feedback.textContent = "Correct! Moving to next question.";
+      feedback.className = 'feedback';
+      totalCorrect++;
+      currentQuestionIndex++;
+      setTimeout(displayQuestion, 1500); // Delay to show feedback
+    } else {
+      attempts++;
+      if (attempts >= 3) {
+        feedback.textContent = `Wrong answer. The correct answer is: ${questions[currentQuestionIndex].answer}. Moving to next question.`;
+        feedback.className = 'feedback wrong';
+        currentQuestionIndex++;
+        setTimeout(displayQuestion, 3000); // Longer delay to show answer
+      } else {
+        feedback.textContent = `Wrong answer (${attempts}/3). Try again.`;
+        feedback.className = 'feedback wrong';
+      }
+    }
+  }
+
+  submitBtn.addEventListener('click', checkAnswer);
+
+  // Allow Enter key to submit
+  answerInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      checkAnswer();
+    }
+  });
+
+  // Initialize first question
+  displayQuestion();
+</script>
+
+</body>
+</html>

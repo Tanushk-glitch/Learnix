@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sample Video | Learnix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    :root {
+      --primary-blue: #2563eb;
+      --primary-green: #22c55e;
+      --text-dark: #1f2937;
+      --text-light: #6b7280;
+      --bg-light: #f8fbff;
+      --card-bg: #ffffff;
+      --border-radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: var(--bg-light);
+      color: var(--text-dark);
+    }
+
+    /* ---------- HEADER ---------- */
+    header {
+      background: #fff;
+      padding: 18px 8%;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary-green);
+    }
+
+    .logo-icon {
+      font-size: 1.6rem;
+      margin-right: 8px;
+    }
+
+    nav a {
+      margin-left: 24px;
+      text-decoration: none;
+      color: var(--text-dark);
+      font-weight: 500;
+    }
+
+    /* ---------- HERO ---------- */
+    .hero {
+      text-align: center;
+      padding: 70px 10%;
+      background: linear-gradient(to bottom, #f4f9ff, #ffffff);
+    }
+
+    .hero span {
+      background: #e8f1ff;
+      color: var(--primary-blue);
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 14px;
+      display: inline-block;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    .hero p {
+      color: var(--text-light);
+      max-width: 700px;
+      margin: auto;
+    }
+
+    /* ---------- VIDEO SECTION ---------- */
+    .video-section {
+        padding: 60px 6%;
+        display: grid;
+        grid-template-columns: 28% 44% 28%;
+        gap: 28px;
+        align-items: start;
+    }
+
+    .summary-section {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      min-height: 220px;
+      overflow: auto;
+    }
+
+    .summary-section h3 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: var(--primary-blue);
+    }
+
+    .summary-section p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+    }
+
+    .summary-loader {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100px;
+      color: var(--text-light);
+    }
+
+    .spinner {
+      border: 3px solid #e5e7eb;
+      border-top: 3px solid var(--primary-blue);
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .video-container {
+      background: transparent;
+    }
+
+    .video-container .video-card {
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .questions-section {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      min-height: 220px;
+      overflow: auto;
+    }
+
+    .questions-section h3 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: var(--primary-blue);
+    }
+
+    .question-display {
+      margin-bottom: 20px;
+    }
+
+    .question-display h4 {
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: var(--text-dark);
+    }
+
+    .answer-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .submit-btn {
+      padding: 10px 20px;
+      background: var(--primary-green);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .submit-btn:hover {
+      background: #1e8e3e;
+    }
+
+    .feedback {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--primary-blue);
+    }
+
+    .feedback.wrong {
+      color: #dc2626;
+    }
+
+    .video-card h2 {
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .video-card p {
+      color: var(--text-light);
+      margin-bottom: 20px;
+    }
+
+    video {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      background: #000;
+    }
+
+    .video-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .video-actions button {
+      padding: 12px 26px;
+      border-radius: 30px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .enroll-btn {
+      background: var(--primary-blue);
+      color: #fff;
+    }
+
+    .enroll-btn:hover {
+      background: #1e4fd8;
+    }
+
+    .back-btn {
+      background: #ffffff;
+      color: var(--primary-blue);
+      border: 2px solid var(--primary-blue);
+    }
+
+    .back-btn:hover {
+      background: #e8f1ff;
+    }
+
+    /* Responsive: stack columns on narrow screens */
+    @media (max-width: 900px) {
+      .video-section {
+        grid-template-columns: 1fr;
+        padding: 40px 6%;
+      }
+      .summary-section, .video-container, .questions-section {
+        min-height: auto;
+      }
+    }
+
+    /* ---------- FOOTER ---------- */
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: var(--text-light);
+      background: #f1f5f9;
+      margin-top: 80px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo"><span class="logo-icon">📖</span> Learnix</div>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="#">Features</a>
+    <a href="Courses.html">Courses</a>
+    <a href="#">About</a>
+    <a href="#">Contact</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <span>🎥 Sample Lecture</span>
+  <h1>Web Development – Introduction</h1>
+  <p>Watch a preview of our teaching style and course content before enrolling.</p>
+</section>
+
+<section class="video-section">
+  <!-- Summary Section (Left) -->
+  <div class="summary-section">
+    <h3>AI Summary</h3>
+    <div id="summary-container">Click "Generate" to create a 2–3 paragraph summary based on the video.</div>
+    <div style="margin-top:12px; display:flex; gap:8px;">
+      <button id="generate-btn" class="enroll-btn">Generate Summary & Questions</button>
+      <button id="sample-btn" class="back-btn">Use Sample</button>
+    </div>
+  </div>
+
+  <!-- Video Container (Center) -->
+  <div class="video-container">
+    <div class="video-card">
+      <h2>Course Overview</h2>
+      <p>This sample video gives you an overview of the Web Development course structure, tools, and learning outcomes.</p>
+
+      <!-- Replace src with your video file or URL -->
+      <video id="course-video" controls poster="https://via.placeholder.com/900x500?text=Sample+Video">
+        <source id="video-source" src="Web_dev.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+
+      <div class="video-actions">
+        <button class="enroll-btn" onclick="window.location.href='login.html'">Enroll Now</button>
+        <button class="back-btn" onclick="window.location.href='Courses.html'">Back to Courses</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Questions Section (Right) -->
+  <div class="questions-section">
+    <h3>Quiz Questions</h3>
+    <div id="question-container">
+      <div class="question-display">
+        <h4 id="question-text">Question will appear here.</h4>
+        <input type="text" id="answer-input" class="answer-input" placeholder="Enter your answer">
+        <button id="submit-btn" class="submit-btn">Submit Answer</button>
+        <div id="feedback" class="feedback"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  © 2023 Learnix. All rights reserved.
+</footer>
+
+<script>
+  // Questions will be provided by AI. Start with an empty array until generation.
+  let questionsData = [];
+
+  let currentQuestionIndex = 0;
+  let attempts = 0;
+  let totalCorrect = 0;
+
+  const questionText = document.getElementById('question-text');
+  const answerInput = document.getElementById('answer-input');
+  const submitBtn = document.getElementById('submit-btn');
+  const feedback = document.getElementById('feedback');
+
+  const generateBtn = document.getElementById('generate-btn');
+  const sampleBtn = document.getElementById('sample-btn');
+  const summaryContainer = document.getElementById('summary-container');
+
+  async function generateFromServer() {
+    const src = document.getElementById('video-source').getAttribute('src');
+    summaryContainer.textContent = 'Generating summary and questions...';
+    generateBtn.disabled = true;
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoUrl: src, maxQuestions: 5 })
+      });
+      if (!res.ok) throw new Error('Server error');
+      const data = await res.json();
+      summaryContainer.innerHTML = data.summary_html || ('<p>' + (data.summary || 'No summary returned.') + '</p>');
+      if (Array.isArray(data.questions) && data.questions.length) {
+        questionsData = data.questions.map(q => ({ question: q.question, answer: q.answer }));
+        currentQuestionIndex = 0; totalCorrect = 0;
+        displayQuestion();
+      } else {
+        questionsData = [];
+        questionText.textContent = 'No questions generated.';
+      }
+    } catch (err) {
+      summaryContainer.textContent = 'Failed to generate: ' + err.message;
+    } finally {
+      generateBtn.disabled = false;
+    }
+  }
+
+  function useSample() {
+    summaryContainer.innerHTML = '<p>This Web Development course introduces fundamental concepts for building modern websites. You\'ll learn the three core technologies: HTML for structure, CSS for styling, and JavaScript for interactivity. The course covers responsive design principles ensuring your websites look great on all devices.</p><p>Students will explore popular web development frameworks that streamline the development process and follow industry best practices. You\'ll gain hands-on experience building real-world projects and understand the complete workflow from planning to deployment.</p>';
+    questionsData = [
+      { question: 'What are the three core technologies of web development?', answer: 'HTML, CSS, and JavaScript' },
+      { question: 'What does HTML stand for?', answer: 'HyperText Markup Language' },
+      { question: 'What is the primary purpose of CSS?', answer: 'To style and layout web pages' }
+    ];
+    currentQuestionIndex = 0; totalCorrect = 0; displayQuestion();
+  }
+
+  generateBtn.addEventListener('click', generateFromServer);
+  sampleBtn.addEventListener('click', useSample);
+
+  function displayQuestion() {
+    if (currentQuestionIndex < questionsData.length) {
+      questionText.textContent = questionsData[currentQuestionIndex].question;
+      answerInput.value = '';
+      feedback.textContent = '';
+      feedback.className = 'feedback';
+      attempts = 0;
+      // Ensure input is visible and enabled for answering
+      answerInput.style.display = '';
+      answerInput.disabled = false;
+      submitBtn.style.display = '';
+      submitBtn.disabled = false;
+    } else {
+      if (questionsData.length === 0) {
+        questionText.textContent = 'No questions yet. Click "Generate Summary & Questions" to create quiz items.';
+        answerInput.style.display = '';
+        answerInput.value = '';
+        answerInput.disabled = true;
+        submitBtn.style.display = '';
+        submitBtn.disabled = true;
+        feedback.textContent = '';
+      } else {
+        questionText.textContent = `Quiz completed! You got ${totalCorrect} out of ${questionsData.length} questions correct.`;
+        answerInput.style.display = '';
+        answerInput.disabled = true;
+        submitBtn.style.display = '';
+        submitBtn.disabled = true;
+        feedback.textContent = '';
+      }
+    }
+  }
+
+  function checkAnswer() {
+    const userAnswer = answerInput.value.trim().toLowerCase();
+    const correctAnswer = questionsData[currentQuestionIndex].answer.toLowerCase();
+
+    if (userAnswer === correctAnswer) {
+      feedback.textContent = "Correct! Moving to next question.";
+      feedback.className = 'feedback';
+      totalCorrect++;
+      currentQuestionIndex++;
+      setTimeout(displayQuestion, 1500);
+    } else {
+      attempts++;
+      if (attempts >= 3) {
+        feedback.textContent = `Wrong answer. The correct answer is: ${questionsData[currentQuestionIndex].answer}. Moving to next question.`;
+        feedback.className = 'feedback wrong';
+        currentQuestionIndex++;
+        setTimeout(displayQuestion, 3000);
+      } else {
+        feedback.textContent = `Wrong answer (${attempts}/3). Try again.`;
+        feedback.className = 'feedback wrong';
+      }
+    }
+  }
+
+  submitBtn.addEventListener('click', checkAnswer);
+
+  // Allow Enter key to submit
+  answerInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      checkAnswer();
+    }
+  });
+
+  // Initialize first question
+  displayQuestion();
+</script>
+
+</body>
+</html>

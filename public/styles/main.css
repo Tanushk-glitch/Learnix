@@ -1,0 +1,431 @@
+/* =========================
+   GLOBAL
+   ========================= */
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #e9f5ff 100%);
+    color: #222;
+}
+
+/* =========================
+   NAVBAR
+   ========================= */
+
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 48px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.03);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #22c55e;
+}
+
+.logo-icon {
+    font-size: 1.6rem;
+    margin-right: 8px;
+}
+
+.logo-text {
+    color: #22c55e;
+    font-weight: 700;
+}
+
+.nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #222;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: color 0.2s;
+}
+
+.nav-links a:hover {
+    color: #2563eb;
+}
+
+.nav-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.profile-link {
+    background: #f0f6ff;
+    color: #1d4ed8;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.profile-link:hover {
+    background: #e0edff;
+}
+
+/* =========================
+   NAV BUTTONS
+   ========================= */
+
+/* Log in (anchor styled like button) */
+.sign-in {
+    background: #ffffff;
+    color: #2563eb;
+    border: 1px solid #2563eb;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.sign-in:hover {
+    background: #f0f6ff;
+}
+
+/* Sign up */
+.sign-up {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 22px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.sign-up:hover {
+    background: #1d4ed8;
+    box-shadow: 0 2px 10px rgba(37,99,235,0.3);
+}
+
+/* Get started */
+.get-started {
+    background: #22c55e;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+}
+
+.get-started:hover {
+    background: #16a34a;
+}
+
+/* =========================
+   HERO SECTION
+   ========================= */
+
+.hero {
+    text-align: center;
+    padding: 80px 20px 40px;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.transform-banner {
+    display: inline-block;
+    background: #e0edff;
+    color: #2563eb;
+    padding: 8px 24px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 32px;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.07);
+}
+
+.hero h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+    line-height: 1.1;
+}
+
+.journey {
+    color: #2563eb;
+}
+
+.today {
+    color: #22c55e;
+}
+
+.subtitle {
+    font-size: 1.15rem;
+    color: #555;
+    margin-bottom: 36px;
+}
+
+.profile-page-card {
+    max-width: 420px;
+    margin: 0 auto 28px;
+    text-align: left;
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.08);
+    padding: 14px 18px;
+}
+
+.profile-page-card p {
+    margin: 8px 0;
+    font-size: 1rem;
+    color: #1f2937;
+}
+
+/* =========================
+   CTA BUTTONS
+   ========================= */
+
+.cta-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+.get-started-free {
+    background: #2563eb;
+    color: #ffffff;
+    border-radius: 8px;
+    padding: 14px 36px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.07);
+    transition: background 0.2s;
+    text-decoration: none;
+    border: none;
+}
+
+.get-started-free:hover {
+    background: #1d4ed8;
+}
+
+.schedule-demo {
+    background: #ffffff;
+    color: #2563eb;
+    border: 1.5px solid #e0edff;
+    border-radius: 8px;
+    padding: 14px 36px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(37,99,235,0.07);
+    transition: background 0.2s;
+    text-decoration: none;
+}
+
+.schedule-demo:hover {
+    background: #f0f6ff;
+}
+
+.trial-info {
+    color: #888;
+    font-size: 0.98rem;
+    margin-top: 10px;
+}
+
+/* =========================
+   FORMS (LOGIN / SIGNUP)
+   ========================= */
+
+.demo-form {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.demo-form input {
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1.5px solid #e0edff;
+    font-size: 1rem;
+    min-width: 220px;
+}
+
+.demo-form input:focus {
+    outline: none;
+    border-color: #2563eb;
+    background: #f0f6ff;
+}
+
+/* =========================
+   WHY LEARNIX SECTION
+   ========================= */
+
+.section {
+    padding: 20px;
+    background: #ffffff;
+    margin: 20px 0;
+    border-radius: 5px;
+}
+
+.why-learnix-section {
+    background: radial-gradient(circle at 50% 0%, #e0edff 0%, #f8fafc 100%);
+    padding: 60px 0 40px;
+}
+
+.why-learnix-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.premium-badge {
+    display: inline-block;
+    background: #e0edff;
+    color: #2563eb;
+    padding: 8px 24px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 24px;
+}
+
+.why-learnix-title {
+    font-size: 2.8rem;
+    font-weight: 800;
+    margin-bottom: 18px;
+    background: linear-gradient(90deg, #2563eb 40%, #22c55e 60%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.learnix-gradient {
+    font-weight: 800;
+}
+
+.why-q {
+    color: #f59e42;
+}
+
+.why-learnix-desc {
+    font-size: 1.15rem;
+    color: #555;
+    margin-bottom: 38px;
+}
+
+.why-learnix-cards {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    flex-wrap: wrap;
+}
+
+.why-card {
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    padding: 40px 28px 32px;
+    max-width: 320px;
+    flex: 1 1 280px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.why-card:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 8px 32px rgba(37,99,235,0.13);
+}
+
+.why-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+}
+
+.why-icon-blue {
+    background: linear-gradient(135deg, #e0edff 60%, #2563eb 100%);
+}
+
+.why-icon-green {
+    background: linear-gradient(135deg, #e6fbe8 60%, #22c55e 100%);
+}
+
+.why-icon-orange {
+    background: linear-gradient(135deg, #fff4e6 60%, #f59e42 100%);
+}
+
+/* =========================
+   FOOTER
+   ========================= */
+
+footer {
+    text-align: center;
+    padding: 32px 0 16px;
+    color: #aaa;
+    font-size: 0.95rem;
+}
+
+/* =========================
+   DARK MODE (SAFE)
+   ========================= */
+
+body.dark {
+    background: #020617;
+    color: #e5e7eb;
+}
+
+body.dark .navbar {
+    background: #020617;
+}
+
+body.dark .nav-links a {
+    color: #e5e7eb;
+}
+
+body.dark .sign-in {
+    color: #60a5fa;
+    border-color: #60a5fa;
+}
+
+body.dark .sign-up {
+    background: #3b82f6;
+}
+
+body.dark .get-started {
+    background: #22c55e;
+}
+
+body.dark .hero {
+    background: #020617;
+}
+
+body.dark .demo-form input {
+    background: #020617;
+    color: #e5e7eb;
+    border-color: #334155;
+}

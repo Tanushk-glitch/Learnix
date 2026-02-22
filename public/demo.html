@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule a Demo | Learnix</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="logo">
+            <span class="logo-icon">📖</span>
+            <span class="logo-text">Learnix</span>
+        </div>
+        <nav>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="#">Features</a></li>
+                <li><a href="Courses.html">Courses</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+        <div class="nav-actions">
+            <button class="sign-in">Sign In</button>
+            <button class="get-started">Get Started</button>
+        </div>
+    </header>
+    <main>
+        <section class="hero">
+            <h1>
+                Schedule a <span class="journey">Demo</span>
+            </h1>
+            <p class="subtitle">
+                Enter your details below and our team will contact you to arrange a personalized demo.
+            </p>
+            <form class="demo-form" id="demoForm">
+                <input type="text" name="name" placeholder="Full Name" required>
+                <input type="email" name="email" placeholder="Email Address" required>
+                <input type="tel" name="phone" placeholder="Phone Number" required>
+                <textarea name="message" rows="4" placeholder="Your Message (optional)"></textarea>
+                <button type="submit" class="get-started-free">Submit Request</button>
+            </form>
+            <div id="formSuccess" style="display:none; color:#22c55e; margin-top:20px; font-weight:600;">
+                Thank you! We will contact you soon.
+            </div>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2023 Learnix. All rights reserved.</p>
+    </footer>
+    <script src="scripts/demo.js"></script>
+</body>
+</html>
