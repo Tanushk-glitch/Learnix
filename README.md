@@ -34,22 +34,6 @@ It provides tools like AI-powered content generation, student dashboards, authen
 **Optional**
 - OpenAI API (for AI features)
 
----
-
-## 📂 Project Structure
-
-learnix/
-│
-├── views/ # Frontend HTML files
-│ ├── login.html
-│ ├── register.html
-│ └── dashboard.html
-│
-├── db.js # Database connection
-├── server.js # Main backend server
-├── query.js # Database testing script
-├── package.json
-└── README.md
 
 ---
 
