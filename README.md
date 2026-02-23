@@ -76,5 +76,5 @@ Feel free to fork this repo and submit a pull request.
 
 Tanushk Baranwal
 Aspiring Developer 🚀
-Built with ❤️ for learning and innovation.
+Built with ❤️ for learning and innovation.<br>
 Gmail:- baranwaltanushk@gmail.com
