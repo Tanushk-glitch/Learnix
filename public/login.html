@@ -45,9 +45,15 @@
             Continue your learning journey by signing in to your account.
         </p>
 
-        <form class="demo-form" action="/login"  method="post" >
+        <form id="loginForm" class="demo-form" action="/login" method="post">
             <input type="email" name="username" placeholder="Email Address" required>
             <input type="password" name="password" placeholder="Password" required>
+            <select name="role" required>
+                <option value="" disabled selected>Select Role</option>
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
+            </select>
+            <input type="text" name="department" placeholder="Department" required>
             <button type="submit" class="get-started-free">Log in</button>
         </form>
 
@@ -60,14 +66,6 @@
 <footer>
     <p>&copy; 2023 Learnix. All rights reserved.</p>
 </footer>
-
-<script>
-document.getElementById('loginForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    document.getElementById('loginSuccess').style.display = 'block';
-    this.reset();
-});
-</script>
 
 </body>
 </html>

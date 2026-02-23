@@ -46,9 +46,15 @@
             Start your free learning journey today. No credit card required.
         </p>
 
-        <form class="demo-form" action="/signup" method="post" >
+        <form class="demo-form" action="/signup" method="post">
             <input type="text" name="username" placeholder="Full Name" required>
             <input type="email" name="email" placeholder="Email Address" required>
+            <select name="role" required>
+                <option value="" disabled selected>Select Role</option>
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
+            </select>
+            <input type="text" name="department" placeholder="Department" required>
             <input type="password" name="password" placeholder="Password (min. 6 characters)" required >
             <input type="password" name="confirmPassword" placeholder="Confirm Password" required > 
             <button type="submit" class="get-started-free">Create Account</button>

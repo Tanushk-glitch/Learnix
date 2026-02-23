@@ -266,15 +266,19 @@ body {
     margin-top: 20px;
 }
 
-.demo-form input {
+.demo-form input,
+.demo-form select {
     padding: 12px 14px;
     border-radius: 6px;
     border: 1.5px solid #e0edff;
     font-size: 1rem;
     min-width: 220px;
+    font-family: inherit;
+    background: #ffffff;
 }
 
-.demo-form input:focus {
+.demo-form input:focus,
+.demo-form select:focus {
     outline: none;
     border-color: #2563eb;
     background: #f0f6ff;
@@ -424,7 +428,8 @@ body.dark .hero {
     background: #020617;
 }
 
-body.dark .demo-form input {
+body.dark .demo-form input,
+body.dark .demo-form select {
     background: #020617;
     color: #e5e7eb;
     border-color: #334155;

@@ -11,6 +11,8 @@ db.query(
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
+    role VARCHAR(20) NOT NULL,
+    department VARCHAR(120) NOT NULL,
     password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`,
@@ -19,14 +21,47 @@ db.query(
   }
 );
 
+const ensureColumn = (columnName, definition) => {
+  db.query(
+    `SHOW COLUMNS FROM ${AUTH_TABLE} LIKE ?`,
+    [columnName],
+    (showErr, results) => {
+      if (showErr) {
+        console.error(`Failed to check column ${columnName}:`, showErr.message);
+        return;
+      }
+
+      if (results && results.length > 0) return;
+
+      db.query(
+        `ALTER TABLE ${AUTH_TABLE} ADD COLUMN ${columnName} ${definition}`,
+        (alterErr) => {
+          if (alterErr) {
+            console.error(`Failed to add column ${columnName}:`, alterErr.message);
+          }
+        }
+      );
+    }
+  );
+};
+
+ensureColumn("role", "VARCHAR(20) NOT NULL DEFAULT 'student'");
+ensureColumn("department", "VARCHAR(120) NOT NULL DEFAULT 'General'");
+
 /*signup*/
 
 
 router.post("/signup", async (req, res) => {
-  const { username, email, password, confirmPassword } = req.body;
+  const { username, email, password, confirmPassword, role, department } = req.body;
+  const normalizedRole = role ? String(role).trim().toLowerCase() : "";
+  const normalizedDepartment = department ? String(department).trim() : "";
 
-  if (!username || !email || !password || !confirmPassword) {
+  if (!username || !email || !password || !confirmPassword || !normalizedRole || !normalizedDepartment) {
     return res.status(400).send("All fields are required");
+  }
+
+  if (!["student", "teacher"].includes(normalizedRole)) {
+    return res.status(400).send("Invalid role selected");
   }
 
   if (password !== confirmPassword) {
@@ -36,8 +71,8 @@ router.post("/signup", async (req, res) => {
   const hashedPassword = await bcrypt.hash(password, 10);
 
   db.query(
-    `INSERT INTO ${AUTH_TABLE} (username, email, password) VALUES (?, ?, ?)`,
-    [username, email, hashedPassword],
+    `INSERT INTO ${AUTH_TABLE} (username, email, role, department, password) VALUES (?, ?, ?, ?, ?)`,
+    [username, email, normalizedRole, normalizedDepartment, hashedPassword],
     (err) => {
       if (err) {
         console.error(err);
@@ -55,11 +90,17 @@ router.post("/signup", async (req, res) => {
 
 
 router.post("/login", (req, res) => {
-    const { username: email, password } = req.body;
+    const { username: email, password, role, department } = req.body;
+    const normalizedRole = role ? String(role).trim().toLowerCase() : "";
+    const normalizedDepartment = department ? String(department).trim() : "";
+
+    if (!email || !password || !normalizedRole || !normalizedDepartment) {
+        return res.status(400).send("All fields are required");
+    }
 
     db.query(
-       `SELECT * FROM ${AUTH_TABLE} WHERE email = ?`,
-         [email], 
+       `SELECT * FROM ${AUTH_TABLE} WHERE email = ? AND role = ? AND department = ?`,
+         [email, normalizedRole, normalizedDepartment], 
          async (err, results) => {
             if (err) {
                 console.error(err);
@@ -76,7 +117,9 @@ router.post("/login", (req, res) => {
             req.session.user = {
                 id: results[0].id,
                 username: results[0].username,
-                email: results[0].email
+                email: results[0].email,
+                role: results[0].role,
+                department: results[0].department
             };
             res.redirect("/dashboard");
         }
@@ -104,7 +147,7 @@ router.get("/api/me", (req, res) => {
     }
 
     db.query(
-        `SELECT id, username, email FROM ${AUTH_TABLE} WHERE id = ?`,
+        `SELECT id, username, email, role, department FROM ${AUTH_TABLE} WHERE id = ?`,
         [req.session.userId],
         (err, results) => {
             if (err) {
