@@ -33,6 +33,8 @@
       <div class="profile-page-card">
         <p><strong>User Name:</strong> <span id="profileName">Loading...</span></p>
         <p><strong>Email ID:</strong> <span id="profileEmail">Loading...</span></p>
+        <p><strong>Role:</strong> <span id="profileRole">Loading...</span></p>
+        <p><strong>Department:</strong> <span id="profileDepartment">Loading...</span></p>
       </div>
       <a href="/dashboard" class="get-started-free">Back to Dashboard</a>
     </section>
@@ -49,6 +51,8 @@
         const user = await response.json();
         document.getElementById("profileName").textContent = user.username || "User";
         document.getElementById("profileEmail").textContent = user.email || "";
+        document.getElementById("profileRole").textContent = user.role || "";
+        document.getElementById("profileDepartment").textContent = user.department || "";
       } catch (error) {
         window.location.href = "/login.html";
       }
