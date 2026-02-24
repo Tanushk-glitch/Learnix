@@ -28,14 +28,33 @@
       <div class="transform-banner">
         <span>Welcome</span>
       </div>
-      <h1>
-        Your <span class="journey">Dashboard</span>
+      <h1 id="welcomeTitle">
+        Welcome to <span class="journey">Learnix</span>
       </h1>
       <p class="subtitle">
-        You are successfully logged in.
+        <span id="welcomeUser">Loading...</span>
       </p>
       <a href="home_page.html" class="get-started-free">Go to Home</a>
     </section>
   </main>
+
+  <script>
+    async function loadDashboardUser() {
+      try {
+        const response = await fetch("/api/me");
+        if (!response.ok) {
+          throw new Error("Not authenticated");
+        }
+
+        const user = await response.json();
+        const username = user.username || "User";
+        document.getElementById("welcomeUser").textContent = `Welcome to Learnix, ${username}`;
+      } catch (error) {
+        window.location.href = "/login.html";
+      }
+    }
+
+    loadDashboardUser();
+  </script>
 </body>
 </html>
