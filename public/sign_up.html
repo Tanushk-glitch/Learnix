@@ -49,6 +49,7 @@
         <form class="demo-form" action="/signup" method="post">
             <input type="text" name="username" placeholder="Full Name" required>
             <input type="email" name="email" placeholder="Email Address" required>
+            <input type="tel" name="phone_no" placeholder="Phone Number (10 digits)" pattern="[0-9]{10}" minlength="10" maxlength="10" required>
             <select name="role" required>
                 <option value="" disabled selected>Select Role</option>
                 <option value="student">Student</option>
@@ -57,7 +58,7 @@
             <input type="text" name="department" placeholder="Department" required>
             <input type="password" name="password" placeholder="Password (min. 6 characters)" required >
             <input type="password" name="confirmPassword" placeholder="Confirm Password" required > 
-            <button type="submit" class="get-started-free">Create Account</button>
+            <button type="submit" class="get-started-free" style="flex-basis:100%; width:fit-content; margin:14px auto 0;">Create Account</button>
         </form>
 
         <div id="signupSuccess" style="display:none; color:#22c55e; margin-top:18px; font-weight:600;">
