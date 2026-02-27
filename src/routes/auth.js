@@ -1,12 +1,14 @@
-const express = require("express");
+﻿const express = require("express");
 const bcrypt = require("bcrypt");
 const db = require("../config/database");
 const path = require("path");
 
 const router = express.Router();
 const AUTH_TABLE = "auth_users";
+const TEACHER_TABLE = "teacher";
 const DEPT_TABLE = "dept";
 let deptColumnCache = null;
+let teacherIdAutoIncrement = null;
 
 db.query(
   `CREATE TABLE IF NOT EXISTS ${DEPT_TABLE} (
@@ -163,6 +165,51 @@ const resolveDepartmentId = ({ deptId, departmentName, createIfMissing }, callba
   });
 };
 
+const getTeacherIdAutoIncrement = (callback) => {
+  if (teacherIdAutoIncrement !== null) {
+    return callback(null, teacherIdAutoIncrement);
+  }
+
+  db.query(`SHOW COLUMNS FROM ${TEACHER_TABLE} LIKE 'teacher_id'`, (err, rows) => {
+    if (err) return callback(err);
+    if (!rows || rows.length === 0) {
+      return callback(new Error("Teacher table is missing teacher_id column"));
+    }
+
+    teacherIdAutoIncrement = String(rows[0].Extra || "").toLowerCase().includes("auto_increment");
+    return callback(null, teacherIdAutoIncrement);
+  });
+};
+
+const insertTeacherAccount = ({ username, email, hashedPassword, phoneNo, deptId }, callback) => {
+  getTeacherIdAutoIncrement((metaErr, isAutoIncrement) => {
+    if (metaErr) return callback(metaErr);
+
+    if (isAutoIncrement) {
+      db.query(
+        `INSERT INTO ${TEACHER_TABLE} (name, email, password, phone_no, dept_id) VALUES (?, ?, ?, ?, ?)`,
+        [username, email, hashedPassword, phoneNo, deptId],
+        callback
+      );
+      return;
+    }
+
+    db.query(
+      `SELECT COALESCE(MAX(teacher_id), 0) + 1 AS next_id FROM ${TEACHER_TABLE}`,
+      (nextErr, rows) => {
+        if (nextErr) return callback(nextErr);
+        const nextId = rows[0].next_id;
+
+        db.query(
+          `INSERT INTO ${TEACHER_TABLE} (teacher_id, name, email, password, phone_no, dept_id) VALUES (?, ?, ?, ?, ?, ?)`,
+          [nextId, username, email, hashedPassword, phoneNo, deptId],
+          callback
+        );
+      }
+    );
+  });
+};
+
 /*signup*/
 
 
@@ -196,6 +243,23 @@ router.post("/signup", async (req, res) => {
         return res.status(400).send(deptErr.message || "Invalid department selected");
       }
 
+      if (normalizedRole === "teacher") {
+        insertTeacherAccount(
+          { username, email, hashedPassword, phoneNo: normalizedPhoneNo, deptId: resolvedDeptId },
+          (teacherErr) => {
+            if (teacherErr) {
+              console.error(teacherErr);
+              if (teacherErr.code === "ER_DUP_ENTRY") {
+                return res.status(400).send("Email already registered");
+              }
+              return res.status(500).send(`Error during teacher registration: ${teacherErr.sqlMessage}`);
+            }
+            return res.redirect("/login.html");
+          }
+        );
+        return;
+      }
+
       db.query(
         `INSERT INTO ${AUTH_TABLE} (username, email, phone_no, role, dept_id, password) VALUES (?, ?, ?, ?, ?, ?)`,
         [username, email, normalizedPhoneNo, normalizedRole, resolvedDeptId, hashedPassword],
@@ -207,7 +271,7 @@ router.post("/signup", async (req, res) => {
             }
             return res.status(500).send(`Error during registration: ${err.sqlMessage}`);
           }
-          res.redirect("/login.html");
+          return res.redirect("/login.html");
         }
       );
     }
@@ -232,6 +296,43 @@ router.post("/login", (req, res) => {
           return res.status(400).send("Invalid department selected");
         }
 
+        if (normalizedRole === "teacher") {
+          db.query(
+            `SELECT teacher_id, name, email, phone_no, dept_id, password
+             FROM ${TEACHER_TABLE}
+             WHERE email = ? AND dept_id = ?`,
+            [email, resolvedDeptId],
+            async (err, results) => {
+              if (err) {
+                console.error(err);
+                return res.send("Error during login");
+              }
+              if (!results || results.length === 0) {
+                return res.send("Invalid email or password");
+              }
+
+              const isMatch = await bcrypt.compare(password, results[0].password);
+              if (!isMatch) {
+                return res.send("Invalid email or password");
+              }
+
+              req.session.userId = results[0].teacher_id;
+              req.session.userSource = "teacher";
+              req.session.user = {
+                id: results[0].teacher_id,
+                username: results[0].name,
+                email: results[0].email,
+                phone_no: results[0].phone_no,
+                role: "teacher",
+                dept_id: results[0].dept_id,
+                department: resolvedDeptName || ""
+              };
+              return res.redirect("/dashboard");
+            }
+          );
+          return;
+        }
+
         db.query(
           `SELECT id, username, email, phone_no, role, dept_id, password
            FROM ${AUTH_TABLE}
@@ -252,6 +353,7 @@ router.post("/login", (req, res) => {
             }
 
             req.session.userId = results[0].id;
+            req.session.userSource = "auth_users";
             req.session.user = {
               id: results[0].id,
               username: results[0].username,
@@ -286,6 +388,39 @@ router.get("/api/me", (req, res) => {
 
     if (req.session.user) {
         return res.json(req.session.user);
+    }
+
+    const userSource = req.session.userSource || "auth_users";
+
+    if (userSource === "teacher") {
+      getDeptColumns((deptColumnsErr, deptColumns) => {
+        if (deptColumnsErr) {
+          console.error(deptColumnsErr);
+          return res.status(500).json({ error: "Failed to resolve department schema" });
+        }
+
+        db.query(
+          `SELECT t.teacher_id AS id, t.name AS username, t.email, t.phone_no, 'teacher' AS role, t.dept_id, d.${deptColumns.nameCol} AS department
+           FROM ${TEACHER_TABLE} t
+           LEFT JOIN ${DEPT_TABLE} d ON d.${deptColumns.idCol} = t.dept_id
+           WHERE t.teacher_id = ?`,
+          [req.session.userId],
+          (err, results) => {
+            if (err) {
+              console.error(err);
+              return res.status(500).json({ error: "Failed to fetch user profile" });
+            }
+
+            if (!results || results.length === 0) {
+              return res.status(404).json({ error: "User not found" });
+            }
+
+            req.session.user = results[0];
+            return res.json(results[0]);
+          }
+        );
+      });
+      return;
     }
 
     getDeptColumns((deptColumnsErr, deptColumns) => {
