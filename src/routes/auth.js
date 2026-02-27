@@ -327,7 +327,7 @@ router.post("/login", (req, res) => {
                 dept_id: results[0].dept_id,
                 department: resolvedDeptName || ""
               };
-              return res.redirect("/dashboard");
+              return res.redirect("/home_page.html");
             }
           );
           return;
@@ -363,7 +363,7 @@ router.post("/login", (req, res) => {
               dept_id: results[0].dept_id,
               department: resolvedDeptName || ""
             };
-            res.redirect("/dashboard");
+            res.redirect("/home_page.html");
           }
         );
       }
