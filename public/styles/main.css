@@ -384,6 +384,78 @@ body {
 }
 
 /* =========================
+   STUDENT REVIEWS
+   ========================= */
+
+.student-reviews-section {
+    background: #f8fbff;
+    border: 1px solid #e0edff;
+    border-radius: 16px;
+    padding: 28px 24px;
+    margin: 22px auto;
+    max-width: 1120px;
+}
+
+.reviews-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.reviews-header h2 {
+    margin: 0 0 8px;
+    font-size: 2rem;
+    color: #1e3a8a;
+}
+
+.reviews-header p {
+    margin: 0;
+    color: #475569;
+    font-size: 1rem;
+}
+
+.reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+}
+
+.review-card {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 10px rgba(37,99,235,0.07);
+}
+
+.review-meta {
+    margin-bottom: 10px;
+}
+
+.review-meta strong {
+    display: block;
+    font-size: 1rem;
+    color: #0f172a;
+}
+
+.review-meta span {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.review-card p {
+    margin: 0 0 12px;
+    color: #334155;
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+.review-foot {
+    font-size: 0.85rem;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+/* =========================
    FOOTER
    ========================= */
 

@@ -64,7 +64,7 @@
 </main>
 
 <!-- Why Choose Learnix Section -->
-<section class="section why-learnix-section">
+<section class="section why-learnix-section" id="whyLearnixSection">
     <div class="why-learnix-header">
         <div class="premium-badge">
             <span>âœ¨ Premium Features</span>
@@ -111,6 +111,51 @@
     </div>
 </section>
 
+<section class="section student-reviews-section" id="studentReviewsSection" style="display:none;">
+    <div class="reviews-header">
+        <h2>What Our Students Say</h2>
+        <p>Recent feedback from learners who completed classes this month.</p>
+    </div>
+
+    <div class="reviews-grid">
+        <article class="review-card">
+            <div class="review-meta">
+                <strong>Riya Patil</strong>
+                <span>Data Science • Weekend Batch</span>
+            </div>
+            <p>"Before joining, I could not clean datasets properly. After 6 weeks, I built my first mini project and my interview confidence improved a lot."</p>
+            <div class="review-foot">4.8/5 • Posted 3 days ago</div>
+        </article>
+
+        <article class="review-card">
+            <div class="review-meta">
+                <strong>Aman Sharma</strong>
+                <span>Python Basics • Evening Batch</span>
+            </div>
+            <p>"The recorded sessions plus live doubt support really helped. I work full-time, so this format was practical and easy to follow."</p>
+            <div class="review-foot">4.7/5 • Posted 5 days ago</div>
+        </article>
+
+        <article class="review-card">
+            <div class="review-meta">
+                <strong>Neha Kulkarni</strong>
+                <span>UI/UX Fundamentals • Morning Batch</span>
+            </div>
+            <p>"Assignments were very real-world. My portfolio now has 3 proper case studies, and I got shortlisted for two internships this week."</p>
+            <div class="review-foot">4.9/5 • Posted 1 week ago</div>
+        </article>
+
+        <article class="review-card">
+            <div class="review-meta">
+                <strong>Harsh Verma</strong>
+                <span>Machine Learning • Advanced Batch</span>
+            </div>
+            <p>"Best part was weekly code reviews. My model evaluation mistakes reduced a lot, and I finally understood when to use precision vs recall."</p>
+            <div class="review-foot">4.8/5 • Posted 6 days ago</div>
+        </article>
+    </div>
+</section>
+
 <section class="section" style="text-align:center;">
     <h2>Contact Us</h2>
     <p>Name: Yash Chaphekar</p>
@@ -142,9 +187,18 @@ fetch('/api/me', { credentials: 'same-origin' })
   })
   .then(() => {
     const navActions = document.getElementById('navActions');
-    if (navActions) navActions.innerHTML = '';
+    if (navActions) {
+      navActions.innerHTML = `
+        <a href="/profile" class="profile-link">Profile</a>
+        <a href="/logout" class="sign-in">Logout</a>
+      `;
+    }
     const heroGetStartedBtn = document.getElementById('heroGetStartedBtn');
     if (heroGetStartedBtn) heroGetStartedBtn.style.display = 'none';
+    const whyLearnixSection = document.getElementById('whyLearnixSection');
+    if (whyLearnixSection) whyLearnixSection.style.display = 'none';
+    const studentReviewsSection = document.getElementById('studentReviewsSection');
+    if (studentReviewsSection) studentReviewsSection.style.display = 'block';
   })
   .catch(() => {
     // Guest user: keep login/signup/get-started visible.
