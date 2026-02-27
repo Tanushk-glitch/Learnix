@@ -1,4 +1,4 @@
-create database university;
+﻿create database university;
 
 use university;
 
@@ -18,6 +18,7 @@ create table auth_users(
     created_at timestamp default current_timestamp,
     foreign key (dept_id) references dept(dept_id)
 );
+
 
 create table teacher(
     teacher_id int auto_increment primary key,
@@ -50,3 +51,4 @@ create table enrollment(
     course_id int,
     foreign key (course_id) references courses(course_id)
 );
+
