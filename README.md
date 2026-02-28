@@ -1,80 +1,103 @@
-# 🚀 Learnix – Smart Student Learning Platform
+# 🚀 Mini Project – User Authentication System
 
-Learnix is a modern student-focused web platform designed to improve learning engagement, productivity, and collaboration.  
-It provides tools like AI-powered content generation, student dashboards, authentication, and smart learning utilities.
+## 📌 Project Overview
+This project is a full-stack authentication system built using Node.js, Express, and MySQL.  
+It allows users to sign up, log in securely, and manage sessions with proper password encryption and email verification.
 
----
-
-## 📌 Features
-
-- 🔐 User Authentication (Login / Register)
-- 🧠 AI Content Generation (Notes, summaries, ideas)
-- 📊 Student Dashboard
-- 📚 Study Resource Management
-- 🗂️ MySQL Database Integration
-- ⚡ Fast and lightweight UI
-- 🌐 REST API support
+The goal of this project is to implement secure authentication with best practices in backend development.
 
 ---
 
 ## 🛠️ Tech Stack
 
-**Frontend**
-- HTML5
-- CSS3
+### Frontend
+- HTML
+- CSS
 - JavaScript
 
-**Backend**
+### Backend
 - Node.js
 - Express.js
 
-**Database**
+### Database
 - MySQL
 
-**Optional**
-- OpenAI API (for AI features)
-
-
----
-
-
- ## 🎯 Use Cases
-
-Student mini projects
-
-Learning management systems
-
-AI-powered study tools
-
-College submissions
+### Security & Authentication
+- bcrypt (Password Hashing)
+- Express Sessions / JWT
+- Email Verification (SMTP)
 
 ---
 
+## ✅ Features Implemented
 
-##  🔮 Future Improvements
-
-📱 Mobile responsive UI
-
-🎓 Course modules
-
-📈 Analytics dashboard
-
-🧑‍🤝‍🧑 Student collaboration tools
-
-☁️ Cloud deployment
+- ✔️ User Signup
+- ✔️ User Login
+- ✔️ Password Hashing using bcrypt
+- ✔️ MySQL Database Connection
+- ✔️ Backend API Integration
+- ✔️ Session/JWT Authentication
+- ✔️ Email Validation & Verification
+- ✔️ Environment Variables using .env
 
 ---
 
-## 🤝 Contributing
+## 🔐 Security Implementation
 
-Contributions are welcome!
-Feel free to fork this repo and submit a pull request.
+- Passwords are hashed using **bcrypt**
+- Sensitive data stored in `.env`
+- Session secret configured
+- Email verification prevents fake registrations
+- Input validation applied on signup/login
+
+---
+## 📂 Project Structure
+
+
+## 📂 Project Structure
+
+```bash
+project-folder/
+│
+├── public/            # Frontend files (HTML, CSS, JS)
+├── routes/            # Route handlers
+├── config/            # Database configuration
+├── server.js          # Main server file
+├── .env               # Environment variables
+├── package.json
+└── README.md
+```
+---
+
+🧪 Future Improvements
+
+Forgot Password Feature
+
+OTP-based Verification
+
+Admin Dashboard
+
+Role-based Authentication
+
+Deployment on cloud (Render / Railway / VPS)
 
 ---
 
-## 👨‍💻 Author
+🎯 Learning Outcomes
 
-Tanushk Baranwal
-Aspiring Developer 🚀
-Built with ❤️ for learning and innovation.<br>
+Understanding of backend architecture
+
+Secure password storage
+
+Session & token-based authentication
+
+Database integration with Node.js
+
+Email verification workflow
+
+---
+
+👨‍💻 Author
+
+Tanushk Baranwal <br>
 Gmail:- baranwaltanushk@gmail.com
