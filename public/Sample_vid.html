@@ -325,14 +325,22 @@
       </video>
 
       <div class="video-actions">
-        <button class="enroll-btn" onclick="window.location.href='login.html'">Enroll Now</button>
+        <button id="enroll-btn" class="enroll-btn">Enroll Now</button>
         <button class="back-btn" onclick="window.location.href='Courses.html'">Back to Courses</button>
       </div>
+      <div id="enroll-form-wrap" style="display:none; margin-top: 12px;">
+        <input id="student-name" class="answer-input" type="text" placeholder="Full Name">
+        <input id="student-email" class="answer-input" type="email" placeholder="Email">
+        <input id="student-phone" class="answer-input" type="text" placeholder="Phone (10 digits)">
+        <input id="student-department" class="answer-input" type="text" placeholder="Department (optional)">
+        <button id="submit-enroll-btn" class="submit-btn">Submit Enrollment</button>
+      </div>
+      <div id="enroll-feedback" class="feedback"></div>
     </div>
   </div>
 
   <!-- Questions Section (Right) -->
-  <div class="questions-section">
+  <div class="questions-section" style="display: none;">
     <h3>Quiz Questions</h3>
     <div id="question-container">
       <div class="question-display">
@@ -365,10 +373,22 @@
   const generateBtn = document.getElementById('generate-btn');
   const sampleBtn = document.getElementById('sample-btn');
   const summaryContainer = document.getElementById('summary-container');
+  const questionsSection = document.querySelector('.questions-section');
+  const enrollBtn = document.getElementById('enroll-btn');
+  const enrollFeedback = document.getElementById('enroll-feedback');
+  const enrollFormWrap = document.getElementById('enroll-form-wrap');
+  const studentNameInput = document.getElementById('student-name');
+  const studentEmailInput = document.getElementById('student-email');
+  const studentPhoneInput = document.getElementById('student-phone');
+  const studentDepartmentInput = document.getElementById('student-department');
+  const submitEnrollBtn = document.getElementById('submit-enroll-btn');
+  const courseName = 'Web Development';
+  const isEnrolled = new URLSearchParams(window.location.search).get('enrolled') === '1';
 
   async function generateFromServer() {
     const src = document.getElementById('video-source').getAttribute('src');
     summaryContainer.textContent = 'Generating summary and questions...';
+    questionsSection.style.display = '';
     generateBtn.disabled = true;
     try {
       const res = await fetch('/api/generate', {
@@ -396,16 +416,63 @@
 
   function useSample() {
     summaryContainer.innerHTML = '<p>This Web Development course introduces fundamental concepts for building modern websites. You\'ll learn the three core technologies: HTML for structure, CSS for styling, and JavaScript for interactivity. The course covers responsive design principles ensuring your websites look great on all devices.</p><p>Students will explore popular web development frameworks that streamline the development process and follow industry best practices. You\'ll gain hands-on experience building real-world projects and understand the complete workflow from planning to deployment.</p>';
-    questionsData = [
-      { question: 'What are the three core technologies of web development?', answer: 'HTML, CSS, and JavaScript' },
-      { question: 'What does HTML stand for?', answer: 'HyperText Markup Language' },
-      { question: 'What is the primary purpose of CSS?', answer: 'To style and layout web pages' }
-    ];
-    currentQuestionIndex = 0; totalCorrect = 0; displayQuestion();
+    questionsSection.style.display = 'none';
+  }
+
+  async function submitEnrollmentRequest() {
+    const studentName = studentNameInput.value.trim();
+    const studentEmail = studentEmailInput.value.trim();
+    const studentPhone = studentPhoneInput.value.trim();
+    const department = studentDepartmentInput.value.trim();
+
+    if (!studentName || !studentEmail || !studentPhone) {
+      enrollFeedback.textContent = 'Name, email and phone are required.';
+      enrollFeedback.className = 'feedback wrong';
+      return;
+    }
+
+    enrollFeedback.textContent = 'Submitting enrollment form...';
+    enrollFeedback.className = 'feedback';
+    submitEnrollBtn.disabled = true;
+    try {
+      const res = await fetch('/api/enroll-request', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseName,
+          studentName,
+          studentEmail,
+          studentPhone,
+          department
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Enrollment request failed');
+      }
+
+      const info = data.request || {};
+      enrollFeedback.textContent = `${data.message}. Request ID: ${info.request_id || '-'}, Course: ${info.course_name || courseName}, Date: ${info.request_date || 'today'}.`;
+      enrollFormWrap.style.display = 'none';
+      studentNameInput.value = '';
+      studentEmailInput.value = '';
+      studentPhoneInput.value = '';
+      studentDepartmentInput.value = '';
+    } catch (err) {
+      enrollFeedback.textContent = err.message;
+      enrollFeedback.className = 'feedback wrong';
+    } finally {
+      submitEnrollBtn.disabled = false;
+    }
   }
 
   generateBtn.addEventListener('click', generateFromServer);
   sampleBtn.addEventListener('click', useSample);
+  enrollBtn.addEventListener('click', () => {
+    enrollFormWrap.style.display = enrollFormWrap.style.display === 'none' ? 'block' : 'none';
+  });
+  submitEnrollBtn.addEventListener('click', submitEnrollmentRequest);
 
   function displayQuestion() {
     if (currentQuestionIndex < questionsData.length) {
@@ -474,6 +541,10 @@
 
   // Initialize first question
   displayQuestion();
+  if (isEnrolled) {
+    questionsSection.style.display = '';
+    generateFromServer();
+  }
 </script>
 
 </body>

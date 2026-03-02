@@ -183,6 +183,89 @@
       background: #e8f1ff;
     }
 
+    .enroll-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+
+    .enroll-modal.open {
+      display: flex;
+    }
+
+    .enroll-panel {
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+      padding: 20px;
+    }
+
+    .enroll-panel h3 {
+      margin-bottom: 8px;
+      font-size: 24px;
+      color: var(--text-dark);
+    }
+
+    .enroll-panel p {
+      text-align: left;
+      margin-bottom: 14px;
+      color: var(--text-light);
+    }
+
+    .enroll-input {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 9px;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .enroll-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .enroll-actions button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .enroll-submit {
+      background: var(--primary-blue);
+      color: #fff;
+    }
+
+    .enroll-cancel {
+      background: #fff;
+      color: var(--primary-blue);
+      border: 2px solid var(--primary-blue) !important;
+    }
+
+    .enroll-status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--primary-blue);
+      min-height: 20px;
+    }
+
+    .enroll-status.error {
+      color: #dc2626;
+    }
+
     /* ---------- CTA ---------- */
     .cta {
       background: linear-gradient(135deg, #2563eb, #22c55e);
@@ -258,7 +341,7 @@
         <span>⏱ 8 Weeks</span>
         <span>👨‍🏫 Live</span>
       </div>
-      <button onclick="window.location.href='login.html'">Enroll Now</button>
+      <button class="enroll-now-btn" data-course="Web Development" data-video="Sample_vid.html">Enroll Now</button>
       <button class="sample-btn" onclick="window.location.href='Sample_vid.html'">Sample Video</button>
     </div>
 
@@ -270,7 +353,7 @@
         <span>⏱ 6 Weeks</span>
         <span>👨‍🏫 Live</span>
       </div>
-      <button onclick="window.location.href='login.html'">Enroll Now</button>
+      <button class="enroll-now-btn" data-course="Python Programming" data-video="Python_vid.html">Enroll Now</button>
       <button class="sample-btn" onclick="window.location.href='Python_vid.html'">Sample Video</button>
     </div>
 
@@ -282,7 +365,7 @@
         <span>⏱ 10 Weeks</span>
         <span>📊 Project-Based</span>
       </div>
-      <button onclick="window.location.href='login.html'">Enroll Now</button>
+      <button class="enroll-now-btn" data-course="Data Science" data-video="DS_vid.html">Enroll Now</button>
       <button class="sample-btn" onclick="window.location.href='DS_vid.html'">Sample Video</button>
     </div>
 
@@ -294,7 +377,7 @@
         <span>⏱ 5 Weeks</span>
         <span>🎨 Creative</span>
       </div>
-      <button onclick="window.location.href='login.html'">Enroll Now</button>
+      <button class="enroll-now-btn" data-course="UI / UX Design" data-video="UIUX_vid.html">Enroll Now</button>
       <button class="sample-btn" onclick="window.location.href='UIUX_vid.html'">Sample Video</button>
     </div>
 
@@ -311,5 +394,123 @@
   © 2023 Learnix. All rights reserved.
 </footer>
 
+<div id="enroll-modal" class="enroll-modal">
+  <div class="enroll-panel">
+    <h3>Course Enrollment</h3>
+    <p id="enroll-course-label"></p>
+    <input id="enroll-name" class="enroll-input" type="text" placeholder="Full Name">
+    <input id="enroll-email" class="enroll-input" type="email" placeholder="Email">
+    <input id="enroll-phone" class="enroll-input" type="text" placeholder="Phone (10 digits)">
+    <input id="enroll-department" class="enroll-input" type="text" placeholder="Department (optional)">
+    <div class="enroll-actions">
+      <button id="enroll-submit-btn" class="enroll-submit">Submit & Continue</button>
+      <button id="enroll-cancel-btn" class="enroll-cancel">Cancel</button>
+    </div>
+    <div id="enroll-status" class="enroll-status"></div>
+  </div>
+</div>
+
+<script>
+  const enrollModal = document.getElementById('enroll-modal');
+  const enrollCourseLabel = document.getElementById('enroll-course-label');
+  const enrollName = document.getElementById('enroll-name');
+  const enrollEmail = document.getElementById('enroll-email');
+  const enrollPhone = document.getElementById('enroll-phone');
+  const enrollDepartment = document.getElementById('enroll-department');
+  const enrollSubmitBtn = document.getElementById('enroll-submit-btn');
+  const enrollCancelBtn = document.getElementById('enroll-cancel-btn');
+  const enrollStatus = document.getElementById('enroll-status');
+  const enrollNowButtons = document.querySelectorAll('.enroll-now-btn');
+
+  let selectedCourseName = '';
+  let selectedVideoPath = '';
+
+  async function prefillFromAuthUser() {
+    try {
+      const res = await fetch('/api/me', { credentials: 'include' });
+      if (!res.ok) return;
+      const user = await res.json();
+      if (!enrollName.value && user.username) enrollName.value = user.username;
+      if (!enrollEmail.value && user.email) enrollEmail.value = user.email;
+      if (!enrollPhone.value && user.phone_no) enrollPhone.value = user.phone_no;
+      if (!enrollDepartment.value && user.department) enrollDepartment.value = user.department;
+    } catch (e) {}
+  }
+
+  function openEnrollModal(courseName, videoPath) {
+    selectedCourseName = courseName;
+    selectedVideoPath = videoPath;
+    enrollCourseLabel.textContent = `Course: ${courseName}`;
+    enrollStatus.textContent = '';
+    enrollStatus.className = 'enroll-status';
+    enrollModal.classList.add('open');
+    prefillFromAuthUser();
+  }
+
+  function closeEnrollModal() {
+    enrollModal.classList.remove('open');
+  }
+
+  async function submitEnrollmentAndRedirect() {
+    const studentName = enrollName.value.trim();
+    const studentEmail = enrollEmail.value.trim();
+    const studentPhone = enrollPhone.value.trim();
+    const department = enrollDepartment.value.trim();
+
+    if (!studentName || !studentEmail || !studentPhone) {
+      enrollStatus.textContent = 'Name, email and phone are required.';
+      enrollStatus.className = 'enroll-status error';
+      return;
+    }
+
+    enrollStatus.textContent = 'Submitting enrollment...';
+    enrollStatus.className = 'enroll-status';
+    enrollSubmitBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/enroll-request', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseName: selectedCourseName,
+          studentName,
+          studentEmail,
+          studentPhone,
+          department
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Enrollment failed');
+      }
+
+      enrollStatus.textContent = 'Enrollment submitted. Redirecting to course video...';
+      setTimeout(() => {
+        const separator = selectedVideoPath.includes('?') ? '&' : '?';
+        window.location.href = `${selectedVideoPath}${separator}enrolled=1`;
+      }, 500);
+    } catch (err) {
+      enrollStatus.textContent = err.message;
+      enrollStatus.className = 'enroll-status error';
+    } finally {
+      enrollSubmitBtn.disabled = false;
+    }
+  }
+
+  enrollNowButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      openEnrollModal(btn.dataset.course, btn.dataset.video);
+    });
+  });
+
+  enrollSubmitBtn.addEventListener('click', submitEnrollmentAndRedirect);
+  enrollCancelBtn.addEventListener('click', closeEnrollModal);
+  enrollModal.addEventListener('click', (e) => {
+    if (e.target === enrollModal) closeEnrollModal();
+  });
+</script>
 </body>
 </html>
+

@@ -7,8 +7,12 @@ const router = express.Router();
 const AUTH_TABLE = "auth_users";
 const TEACHER_TABLE = "teacher";
 const DEPT_TABLE = "dept";
+const COURSE_TABLE = "courses";
+const ENROLL_TABLE = "enrollment";
+const ENROLL_REQUEST_TABLE = "enrollment_requests";
 let deptColumnCache = null;
 let teacherIdAutoIncrement = null;
+let courseColumnCache = null;
 
 db.query(
   `CREATE TABLE IF NOT EXISTS ${DEPT_TABLE} (
@@ -36,6 +40,102 @@ db.query(
     if (err) console.error("Failed to ensure auth_users table:", err.message);
   }
 );
+
+db.query(
+  `CREATE TABLE IF NOT EXISTS ${TEACHER_TABLE} (
+    teacher_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    phone_no VARCHAR(15) NOT NULL,
+    dept_id INT,
+    FOREIGN KEY (dept_id) REFERENCES ${DEPT_TABLE}(dept_id)
+  )`,
+  (err) => {
+    if (err) console.error("Failed to ensure teacher table:", err.message);
+  }
+);
+
+db.query(
+  `CREATE TABLE IF NOT EXISTS ${COURSE_TABLE} (
+    course_id INT AUTO_INCREMENT PRIMARY KEY,
+    course_name VARCHAR(100) NOT NULL,
+    credits INT NOT NULL,
+    dept_id INT NULL,
+    teacher_id INT NULL,
+    FOREIGN KEY (dept_id) REFERENCES ${DEPT_TABLE}(dept_id),
+    FOREIGN KEY (teacher_id) REFERENCES ${TEACHER_TABLE}(teacher_id)
+  )`,
+  (err) => {
+    if (err) console.error("Failed to ensure courses table:", err.message);
+  }
+);
+
+db.query(
+  `CREATE TABLE IF NOT EXISTS ${ENROLL_TABLE} (
+    enrollment_id INT AUTO_INCREMENT PRIMARY KEY,
+    grade VARCHAR(2),
+    enrollment_date DATE,
+    auth_user_id INT,
+    course_id INT,
+    FOREIGN KEY (auth_user_id) REFERENCES ${AUTH_TABLE}(id),
+    FOREIGN KEY (course_id) REFERENCES ${COURSE_TABLE}(course_id)
+  )`,
+  (err) => {
+    if (err) console.error("Failed to ensure enrollment table:", err.message);
+  }
+);
+
+db.query(
+  `CREATE TABLE IF NOT EXISTS ${ENROLL_REQUEST_TABLE} (
+    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    student_name VARCHAR(200) NOT NULL,
+    student_email VARCHAR(150) NOT NULL,
+    student_phone VARCHAR(15) NOT NULL,
+    department VARCHAR(100),
+    course_id INT NOT NULL,
+    request_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES ${COURSE_TABLE}(course_id)
+  )`,
+  (err) => {
+    if (err) console.error("Failed to ensure enrollment_requests table:", err.message);
+  }
+);
+
+const repairCoursesForeignKeys = () => {
+  db.query(
+    `SELECT CONSTRAINT_NAME
+     FROM information_schema.KEY_COLUMN_USAGE
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = ?
+       AND REFERENCED_TABLE_NAME = ?
+       AND COLUMN_NAME = ?`,
+    [COURSE_TABLE, TEACHER_TABLE, "course_id"],
+    (findErr, rows) => {
+      if (findErr) {
+        console.error("Failed to inspect course foreign keys:", findErr.message);
+        return;
+      }
+
+      const badConstraints = (rows || []).map((r) => r.CONSTRAINT_NAME).filter(Boolean);
+      badConstraints.forEach((constraintName) => {
+        db.query(
+          `ALTER TABLE ${COURSE_TABLE} DROP FOREIGN KEY \`${constraintName}\``,
+          (dropErr) => {
+            if (dropErr) {
+              console.error(`Failed to drop bad foreign key ${constraintName}:`, dropErr.message);
+            } else {
+              console.log(`Dropped invalid foreign key ${constraintName} on ${COURSE_TABLE}.course_id`);
+            }
+          }
+        );
+      });
+    }
+  );
+};
+
+repairCoursesForeignKeys();
 
 const ensureColumn = (columnName, definition) => {
   db.query(
@@ -178,6 +278,54 @@ const getTeacherIdAutoIncrement = (callback) => {
 
     teacherIdAutoIncrement = String(rows[0].Extra || "").toLowerCase().includes("auto_increment");
     return callback(null, teacherIdAutoIncrement);
+  });
+};
+
+const getCourseColumns = (callback) => {
+  if (courseColumnCache) {
+    return callback(null, courseColumnCache);
+  }
+
+  db.query(`SHOW COLUMNS FROM ${COURSE_TABLE}`, (err, rows) => {
+    if (err) return callback(err);
+
+    const fields = new Set((rows || []).map((row) => row.Field));
+    const idCol = fields.has("course_id")
+      ? "course_id"
+      : fields.has("course")
+        ? "course"
+        : fields.has("id")
+          ? "id"
+          : null;
+    const nameCol = fields.has("course_name")
+      ? "course_name"
+      : fields.has("courses_name")
+        ? "courses_name"
+        : fields.has("name")
+          ? "name"
+          : null;
+    const creditsCol = fields.has("credits") ? "credits" : null;
+    const deptCol = fields.has("dept_id") ? "dept_id" : null;
+    const teacherCol = fields.has("teacher_id") ? "teacher_id" : null;
+    const idColumnMeta = (rows || []).find((row) => row.Field === idCol);
+    const idAutoIncrement = !!(
+      idColumnMeta &&
+      String(idColumnMeta.Extra || "").toLowerCase().includes("auto_increment")
+    );
+
+    if (!idCol || !nameCol) {
+      return callback(new Error("Courses table is missing required columns"));
+    }
+
+    courseColumnCache = {
+      idCol,
+      nameCol,
+      creditsCol,
+      deptCol,
+      teacherCol,
+      idAutoIncrement
+    };
+    return callback(null, courseColumnCache);
   });
 };
 
@@ -450,6 +598,278 @@ router.get("/api/me", (req, res) => {
             }
         );
     });
+});
+
+router.post("/api/enroll", (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Please log in first" });
+  }
+
+  if (req.session.userSource === "teacher") {
+    return res.status(403).json({ error: "Teachers cannot enroll in courses" });
+  }
+
+  const rawCourseName = req.body && req.body.courseName ? String(req.body.courseName).trim() : "";
+  if (!rawCourseName) {
+    return res.status(400).json({ error: "courseName is required" });
+  }
+
+  const userId = req.session.userId;
+  const userDeptId = req.session.user && req.session.user.dept_id ? Number(req.session.user.dept_id) : null;
+
+  db.query(
+    `SELECT course_id, course_name, credits, dept_id, teacher_id
+     FROM ${COURSE_TABLE}
+     WHERE course_name = ?
+     LIMIT 1`,
+    [rawCourseName],
+    (courseErr, courseRows) => {
+      if (courseErr) {
+        console.error(courseErr);
+        return res.status(500).json({ error: "Failed to fetch course" });
+      }
+
+      const continueWithCourse = (course) => {
+        db.query(
+          `SELECT enrollment_id, enrollment_date
+           FROM ${ENROLL_TABLE}
+           WHERE auth_user_id = ? AND course_id = ?
+           LIMIT 1`,
+          [userId, course.course_id],
+          (existingErr, existingRows) => {
+            if (existingErr) {
+              console.error(existingErr);
+              return res.status(500).json({ error: "Failed to check enrollment" });
+            }
+
+            if (existingRows && existingRows.length > 0) {
+              db.query(
+                `SELECT c.course_name, c.credits, d.dept_name, t.name AS teacher_name, e.enrollment_date
+                 FROM ${ENROLL_TABLE} e
+                 JOIN ${COURSE_TABLE} c ON c.course_id = e.course_id
+                 LEFT JOIN ${DEPT_TABLE} d ON d.dept_id = c.dept_id
+                 LEFT JOIN ${TEACHER_TABLE} t ON t.teacher_id = c.teacher_id
+                 WHERE e.enrollment_id = ?`,
+                [existingRows[0].enrollment_id],
+                (detailErr, detailRows) => {
+                  if (detailErr) {
+                    console.error(detailErr);
+                    return res.status(500).json({ error: "Failed to load enrollment details" });
+                  }
+                  return res.json({
+                    message: "Already enrolled in this course",
+                    alreadyEnrolled: true,
+                    enrollment: detailRows[0] || null
+                  });
+                }
+              );
+              return;
+            }
+
+            db.query(
+              `INSERT INTO ${ENROLL_TABLE} (grade, enrollment_date, auth_user_id, course_id)
+               VALUES (NULL, CURDATE(), ?, ?)`,
+              [userId, course.course_id],
+              (insertErr, insertResult) => {
+                if (insertErr) {
+                  console.error(insertErr);
+                  return res.status(500).json({ error: "Failed to enroll in course" });
+                }
+
+                db.query(
+                  `SELECT c.course_name, c.credits, d.dept_name, t.name AS teacher_name, e.enrollment_date
+                   FROM ${ENROLL_TABLE} e
+                   JOIN ${COURSE_TABLE} c ON c.course_id = e.course_id
+                   LEFT JOIN ${DEPT_TABLE} d ON d.dept_id = c.dept_id
+                   LEFT JOIN ${TEACHER_TABLE} t ON t.teacher_id = c.teacher_id
+                   WHERE e.enrollment_id = ?`,
+                  [insertResult.insertId],
+                  (detailErr, detailRows) => {
+                    if (detailErr) {
+                      console.error(detailErr);
+                      return res.status(500).json({ error: "Enrollment succeeded but detail fetch failed" });
+                    }
+                    return res.json({
+                      message: "Enrollment successful",
+                      alreadyEnrolled: false,
+                      enrollment: detailRows[0] || null
+                    });
+                  }
+                );
+              }
+            );
+          }
+        );
+      };
+
+      if (courseRows && courseRows.length > 0) {
+        continueWithCourse(courseRows[0]);
+        return;
+      }
+
+      db.query(
+        `INSERT INTO ${COURSE_TABLE} (course_name, credits, dept_id, teacher_id)
+         VALUES (?, ?, ?, NULL)`,
+        [rawCourseName, 3, Number.isInteger(userDeptId) ? userDeptId : null],
+        (insertCourseErr, insertCourseResult) => {
+          if (insertCourseErr) {
+            console.error(insertCourseErr);
+            return res.status(500).json({ error: "Failed to create course before enrollment" });
+          }
+
+          continueWithCourse({
+            course_id: insertCourseResult.insertId,
+            course_name: rawCourseName
+          });
+        }
+      );
+    }
+  );
+});
+
+router.post("/api/enroll-request", (req, res) => {
+  const {
+    courseName,
+    studentName,
+    studentEmail,
+    studentPhone,
+    department
+  } = req.body || {};
+
+  const normalizedCourse = courseName ? String(courseName).trim() : "";
+  const normalizedName = studentName ? String(studentName).trim() : "";
+  const normalizedEmail = studentEmail ? String(studentEmail).trim().toLowerCase() : "";
+  const normalizedPhone = studentPhone ? String(studentPhone).trim() : "";
+  const normalizedDept = department ? String(department).trim() : null;
+
+  if (!normalizedCourse || !normalizedName || !normalizedEmail || !normalizedPhone) {
+    return res.status(400).json({ error: "courseName, studentName, studentEmail, and studentPhone are required" });
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return res.status(400).json({ error: "Invalid email format" });
+  }
+
+  if (!/^\d{10}$/.test(normalizedPhone)) {
+    return res.status(400).json({ error: "Phone number must be exactly 10 digits" });
+  }
+
+  getCourseColumns((courseMetaErr, courseMeta) => {
+    if (courseMetaErr) {
+      console.error(courseMetaErr);
+      return res.status(500).json({ error: "Failed to load courses schema" });
+    }
+
+    const { idCol, nameCol, creditsCol, deptCol, teacherCol, idAutoIncrement } = courseMeta;
+
+    db.query(
+      `SELECT ${idCol} AS course_id, ${nameCol} AS course_name FROM ${COURSE_TABLE} WHERE ${nameCol} = ? LIMIT 1`,
+      [normalizedCourse],
+      (courseErr, courseRows) => {
+        if (courseErr) {
+          console.error(courseErr);
+          return res.status(500).json({ error: `Failed to fetch course: ${courseErr.message}` });
+        }
+
+        const insertRequest = (courseId) => {
+          db.query(
+            `INSERT INTO ${ENROLL_REQUEST_TABLE}
+             (student_name, student_email, student_phone, department, course_id, request_date)
+             VALUES (?, ?, ?, ?, ?, CURDATE())`,
+            [normalizedName, normalizedEmail, normalizedPhone, normalizedDept, courseId],
+            (insertErr, result) => {
+              if (insertErr) {
+                console.error(insertErr);
+                return res.status(500).json({ error: "Failed to submit enrollment request" });
+              }
+
+              db.query(
+                `SELECT r.request_id, r.student_name, r.student_email, r.student_phone, r.department, r.request_date, c.${nameCol} AS course_name
+                 FROM ${ENROLL_REQUEST_TABLE} r
+                 JOIN ${COURSE_TABLE} c ON c.${idCol} = r.course_id
+                 WHERE r.request_id = ?`,
+                [result.insertId],
+                (detailErr, detailRows) => {
+                  if (detailErr) {
+                    console.error(detailErr);
+                    return res.status(500).json({ error: "Request saved but details failed to load" });
+                  }
+                  return res.json({
+                    message: "Enrollment form submitted successfully",
+                    request: detailRows && detailRows[0] ? detailRows[0] : null
+                  });
+                }
+              );
+            }
+          );
+        };
+
+        if (courseRows && courseRows.length > 0) {
+          insertRequest(courseRows[0].course_id);
+          return;
+        }
+
+        const columns = [];
+        const values = [];
+        const placeholders = [];
+
+        if (idCol && !idAutoIncrement) {
+          columns.push(idCol);
+          placeholders.push("?");
+          values.push(null); // replaced with next id below
+        }
+        columns.push(nameCol);
+        placeholders.push("?");
+        values.push(normalizedCourse);
+
+        if (creditsCol) {
+          columns.push(creditsCol);
+          placeholders.push("?");
+          values.push(3);
+        }
+        if (deptCol) {
+          columns.push(deptCol);
+          placeholders.push("NULL");
+        }
+        if (teacherCol) {
+          columns.push(teacherCol);
+          placeholders.push("NULL");
+        }
+
+        const executeInsert = (finalValues) => {
+          db.query(
+            `INSERT INTO ${COURSE_TABLE} (${columns.join(", ")}) VALUES (${placeholders.join(", ")})`,
+            finalValues,
+            (createErr, createResult) => {
+              if (createErr) {
+                console.error(createErr);
+                return res.status(500).json({ error: `Failed to create course: ${createErr.message}` });
+              }
+              const createdCourseId = idAutoIncrement ? createResult.insertId : finalValues[0];
+              insertRequest(createdCourseId);
+            }
+          );
+        };
+
+        if (!idAutoIncrement) {
+          db.query(
+            `SELECT COALESCE(MAX(${idCol}), 0) + 1 AS next_id FROM ${COURSE_TABLE}`,
+            (nextErr, nextRows) => {
+              if (nextErr) {
+                console.error(nextErr);
+                return res.status(500).json({ error: "Failed to assign new course id" });
+              }
+              values[0] = nextRows[0].next_id;
+              executeInsert(values);
+            }
+          );
+          return;
+        }
+
+        executeInsert(values);
+      }
+    );
+  });
 });
 /*logout*/ 
 
