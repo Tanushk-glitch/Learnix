@@ -156,6 +156,14 @@
     </div>
 </section>
 
+<section id="myCoursesPanel" class="courses-panel">
+    <div class="courses-panel-header">
+        <h3 class="courses-panel-title">My Enrolled Courses</h3>
+        <button id="closeCoursesPanel" class="courses-close" type="button">Close</button>
+    </div>
+    <div id="myCoursesGrid" class="courses-grid"></div>
+</section>
+
 <section class="section" style="text-align:center;">
     <h2>Contact Us</h2>
     <p>Name: Yash Chaphekar</p>
@@ -185,14 +193,114 @@ fetch('/api/me', { credentials: 'same-origin' })
     if (!res.ok) throw new Error('Not logged in');
     return res.json();
   })
-  .then(() => {
+  .then((user) => {
     const navActions = document.getElementById('navActions');
     if (navActions) {
       navActions.innerHTML = `
-        <a href="/profile" class="profile-link">Profile</a>
-        <a href="/logout" class="sign-in">Logout</a>
+        <div class="profile-menu">
+          <button id="profileTrigger" class="profile-trigger" type="button">${user.email || 'My Account'}</button>
+          <div id="profileDropdown" class="profile-dropdown">
+            <div class="profile-email">${user.email || ''}</div>
+            <button id="menuMyCourses" class="profile-item" type="button">MY COURSES</button>
+            <button id="menuCertificates" class="profile-item" type="button">MY CERTIFICATES</button>
+            <button id="menuSignOut" class="profile-item" type="button">SIGN-OUT</button>
+          </div>
+        </div>
       `;
     }
+
+    const panel = document.getElementById('myCoursesPanel');
+    const panelGrid = document.getElementById('myCoursesGrid');
+    const closePanelBtn = document.getElementById('closeCoursesPanel');
+    const trigger = document.getElementById('profileTrigger');
+    const dropdown = document.getElementById('profileDropdown');
+    const myCoursesBtn = document.getElementById('menuMyCourses');
+    const certificatesBtn = document.getElementById('menuCertificates');
+    const signOutBtn = document.getElementById('menuSignOut');
+
+    function formatDate(value) {
+      if (!value) return 'N/A';
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
+    }
+
+    async function openMyCoursesPanel() {
+      panelGrid.innerHTML = '<p>Loading enrolled courses...</p>';
+      panel.classList.add('open');
+      try {
+        const response = await fetch('/api/my-courses', { credentials: 'same-origin' });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || 'Failed to load courses');
+        }
+        const courses = Array.isArray(payload.courses) ? payload.courses : [];
+        if (courses.length === 0) {
+          panel.classList.remove('open');
+          window.location.href = 'Courses.html';
+          return;
+        }
+
+        if (courses.length === 1) {
+          const videoPath = courses[0].video_path || 'Courses.html';
+          const separator = videoPath.includes('?') ? '&' : '?';
+          window.location.href = `${videoPath}${separator}enrolled=1`;
+          return;
+        }
+
+        panelGrid.innerHTML = courses.map((course) => `
+          <article class="course-detail-card">
+            <h4>${course.course_name || 'Untitled Course'}</h4>
+            <p><strong>Credits:</strong> ${course.credits ?? 'N/A'}</p>
+            <p><strong>Department:</strong> ${course.dept_name || 'N/A'}</p>
+            <p><strong>Teacher:</strong> ${course.teacher_name || 'N/A'}</p>
+            <p><strong>Enrolled On:</strong> ${formatDate(course.enrollment_date)}</p>
+            <a class="course-open-btn" href="${course.video_path || 'Courses.html'}?enrolled=1">Open Course</a>
+          </article>
+        `).join('');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (err) {
+        panelGrid.innerHTML = `<p>${err.message}</p>`;
+      }
+    }
+
+    if (trigger && dropdown) {
+      trigger.addEventListener('click', () => {
+        dropdown.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!dropdown.contains(event.target) && !trigger.contains(event.target)) {
+          dropdown.classList.remove('open');
+        }
+      });
+    }
+
+    if (myCoursesBtn) {
+      myCoursesBtn.addEventListener('click', () => {
+        dropdown.classList.remove('open');
+        openMyCoursesPanel();
+      });
+    }
+
+    if (certificatesBtn) {
+      certificatesBtn.addEventListener('click', () => {
+        dropdown.classList.remove('open');
+        alert('Certificates section will be added next.');
+      });
+    }
+
+    if (signOutBtn) {
+      signOutBtn.addEventListener('click', () => {
+        window.location.href = '/logout';
+      });
+    }
+
+    if (closePanelBtn) {
+      closePanelBtn.addEventListener('click', () => {
+        panel.classList.remove('open');
+      });
+    }
+
     const heroGetStartedBtn = document.getElementById('heroGetStartedBtn');
     if (heroGetStartedBtn) heroGetStartedBtn.style.display = 'none';
     const whyLearnixSection = document.getElementById('whyLearnixSection');

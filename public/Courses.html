@@ -424,6 +424,17 @@
 
   let selectedCourseName = '';
   let selectedVideoPath = '';
+  let currentUser = null;
+  const enrolledCoursesByName = new Map();
+
+  function normalizeCourseName(name) {
+    return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function redirectToCourse(videoPath) {
+    const separator = videoPath.includes('?') ? '&' : '?';
+    window.location.href = `${videoPath}${separator}enrolled=1`;
+  }
 
   async function prefillFromAuthUser() {
     try {
@@ -449,6 +460,59 @@
 
   function closeEnrollModal() {
     enrollModal.classList.remove('open');
+  }
+
+  async function enrollLoggedInStudentAndRedirect(courseName, fallbackVideoPath) {
+    try {
+      const res = await fetch('/api/enroll', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseName })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Enrollment failed');
+      }
+
+      const enrollment = data.enrollment || {};
+      const resolvedPath = enrollment.video_path || fallbackVideoPath;
+      enrolledCoursesByName.set(normalizeCourseName(courseName), resolvedPath);
+      redirectToCourse(resolvedPath);
+    } catch (err) {
+      alert(err.message || 'Enrollment failed');
+    }
+  }
+
+  async function loadEnrollmentStateForLoggedInUser() {
+    try {
+      const meRes = await fetch('/api/me', { credentials: 'include' });
+      if (!meRes.ok) return;
+      currentUser = await meRes.json();
+
+      if (currentUser.role !== 'student') {
+        return;
+      }
+
+      const myCoursesRes = await fetch('/api/my-courses', { credentials: 'include' });
+      if (!myCoursesRes.ok) return;
+      const payload = await myCoursesRes.json();
+      const courses = Array.isArray(payload.courses) ? payload.courses : [];
+
+      courses.forEach((course) => {
+        enrolledCoursesByName.set(
+          normalizeCourseName(course.course_name),
+          course.video_path || 'Courses.html'
+        );
+      });
+
+      enrollNowButtons.forEach((btn) => {
+        const key = normalizeCourseName(btn.dataset.course);
+        if (enrolledCoursesByName.has(key)) {
+          btn.textContent = 'Go to Course';
+        }
+      });
+    } catch (err) {}
   }
 
   async function submitEnrollmentAndRedirect() {
@@ -500,8 +564,26 @@
   }
 
   enrollNowButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      openEnrollModal(btn.dataset.course, btn.dataset.video);
+    btn.addEventListener('click', async () => {
+      const courseName = btn.dataset.course;
+      const videoPath = btn.dataset.video;
+      const key = normalizeCourseName(courseName);
+
+      if (currentUser && currentUser.role === 'student') {
+        if (enrolledCoursesByName.has(key)) {
+          redirectToCourse(enrolledCoursesByName.get(key));
+          return;
+        }
+        await enrollLoggedInStudentAndRedirect(courseName, videoPath);
+        return;
+      }
+
+      if (currentUser && currentUser.role === 'teacher') {
+        alert('Teacher accounts cannot enroll in student courses.');
+        return;
+      }
+
+      openEnrollModal(courseName, videoPath);
     });
   });
 
@@ -510,6 +592,8 @@
   enrollModal.addEventListener('click', (e) => {
     if (e.target === enrollModal) closeEnrollModal();
   });
+
+  loadEnrollmentStateForLoggedInUser();
 </script>
 </body>
 </html>

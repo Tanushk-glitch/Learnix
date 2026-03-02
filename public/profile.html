@@ -35,12 +35,61 @@
         <p><strong>Email ID:</strong> <span id="profileEmail">Loading...</span></p>
         <p><strong>Role:</strong> <span id="profileRole">Loading...</span></p>
         <p><strong>Department:</strong> <span id="profileDepartment">Loading...</span></p>
+        <p><strong>My Enrolled Courses:</strong></p>
+        <ul id="myCoursesList"></ul>
       </div>
       <a href="/dashboard" class="get-started-free">Back to Dashboard</a>
     </section>
   </main>
 
   <script>
+    function formatDate(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleDateString();
+    }
+
+    async function loadMyCourses(user) {
+      const list = document.getElementById("myCoursesList");
+      list.innerHTML = "";
+
+      if (!user || user.role !== "student") {
+        const item = document.createElement("li");
+        item.textContent = "Only student accounts have enrollments.";
+        list.appendChild(item);
+        return;
+      }
+
+      const response = await fetch("/api/my-courses");
+      if (!response.ok) {
+        throw new Error("Failed to load courses");
+      }
+
+      const payload = await response.json();
+      const courses = Array.isArray(payload.courses) ? payload.courses : [];
+
+      if (courses.length === 0) {
+        const item = document.createElement("li");
+        item.textContent = "No courses enrolled yet.";
+        list.appendChild(item);
+        return;
+      }
+
+      courses.forEach((course) => {
+        const item = document.createElement("li");
+        const link = document.createElement("a");
+        link.href = `${course.video_path || "Courses.html"}?enrolled=1`;
+        link.textContent = course.course_name;
+        const date = formatDate(course.enrollment_date);
+        if (date) {
+          link.textContent += ` (Enrolled: ${date})`;
+        }
+        item.appendChild(link);
+        list.appendChild(item);
+      });
+    }
+
     async function loadProfile() {
       try {
         const response = await fetch("/api/me");
@@ -53,6 +102,7 @@
         document.getElementById("profileEmail").textContent = user.email || "";
         document.getElementById("profileRole").textContent = user.role || "";
         document.getElementById("profileDepartment").textContent = user.department || "";
+        await loadMyCourses(user);
       } catch (error) {
         window.location.href = "/login.html";
       }

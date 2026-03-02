@@ -66,6 +66,141 @@ body {
     align-items: center;
 }
 
+.profile-menu {
+    position: relative;
+}
+
+.profile-trigger {
+    background: #ffffff;
+    color: #1d4ed8;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.profile-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 260px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
+    overflow: hidden;
+    display: none;
+    z-index: 50;
+}
+
+.profile-dropdown.open {
+    display: block;
+}
+
+.profile-email {
+    color: #1d4ed8;
+    font-weight: 700;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.95rem;
+}
+
+.profile-item {
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: #fff;
+    color: #374151;
+    font-size: 1.05rem;
+    font-weight: 600;
+    padding: 14px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.profile-item:last-child {
+    border-bottom: none;
+}
+
+.profile-item:hover {
+    background: #f8fafc;
+}
+
+.courses-panel {
+    display: none;
+    max-width: 980px;
+    margin: 24px auto 0;
+    background: #fff;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(37,99,235,0.08);
+    padding: 16px;
+}
+
+.courses-panel.open {
+    display: block;
+}
+
+.courses-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.courses-panel-title {
+    margin: 0;
+    color: #1e3a8a;
+    font-size: 1.2rem;
+}
+
+.courses-close {
+    border: 1px solid #dbeafe;
+    background: #f8fbff;
+    color: #1d4ed8;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+}
+
+.course-detail-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fff;
+}
+
+.course-detail-card h4 {
+    margin: 0 0 8px;
+    color: #111827;
+}
+
+.course-detail-card p {
+    margin: 0 0 6px;
+    color: #4b5563;
+    font-size: 0.92rem;
+}
+
+.course-open-btn {
+    display: inline-block;
+    margin-top: 8px;
+    background: #2563eb;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
 .profile-link {
     background: #f0f6ff;
     color: #1d4ed8;

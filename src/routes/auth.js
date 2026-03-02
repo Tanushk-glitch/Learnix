@@ -13,6 +13,24 @@ const ENROLL_REQUEST_TABLE = "enrollment_requests";
 let deptColumnCache = null;
 let teacherIdAutoIncrement = null;
 let courseColumnCache = null;
+let enrollmentColumnCache = null;
+
+const COURSE_VIDEO_MAP = {
+  "web development": "Sample_vid.html",
+  "python programming": "Python_vid.html",
+  "data science": "DS_vid.html",
+  "ui / ux design": "UIUX_vid.html",
+  "ui/ux design": "UIUX_vid.html"
+};
+
+const normalizeCourseName = (name) =>
+  String(name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+const resolveCourseVideoPath = (courseName) =>
+  COURSE_VIDEO_MAP[normalizeCourseName(courseName)] || "Courses.html";
 
 db.query(
   `CREATE TABLE IF NOT EXISTS ${DEPT_TABLE} (
@@ -329,6 +347,70 @@ const getCourseColumns = (callback) => {
   });
 };
 
+const getEnrollmentColumns = (callback) => {
+  if (enrollmentColumnCache) {
+    return callback(null, enrollmentColumnCache);
+  }
+
+  db.query(`SHOW COLUMNS FROM ${ENROLL_TABLE}`, (err, rows) => {
+    if (err) return callback(err);
+
+    const fields = new Set((rows || []).map((row) => row.Field));
+    const idCol = fields.has("enrollment_id")
+      ? "enrollment_id"
+      : fields.has("id")
+        ? "id"
+        : fields.has("enrollment")
+          ? "enrollment"
+          : null;
+    const userCol = fields.has("auth_user_id")
+      ? "auth_user_id"
+      : fields.has("user_id")
+        ? "user_id"
+        : fields.has("student_id")
+          ? "student_id"
+          : null;
+    const courseCol = fields.has("course_id")
+      ? "course_id"
+      : fields.has("courses_id")
+        ? "courses_id"
+        : fields.has("course")
+          ? "course"
+          : fields.has("enrollment")
+            ? "enrollment"
+          : null;
+    const dateCol = fields.has("enrollment_date")
+      ? "enrollment_date"
+      : fields.has("enroll_date")
+        ? "enroll_date"
+        : fields.has("engrollment_date")
+          ? "engrollment_date"
+        : fields.has("date")
+          ? "date"
+          : fields.has("created_at")
+            ? "created_at"
+            : null;
+    const gradeCol = fields.has("grade")
+      ? "grade"
+      : fields.has("grades")
+        ? "grades"
+        : null;
+
+    if (!userCol || !courseCol) {
+      return callback(new Error("Enrollment table is missing required columns"));
+    }
+
+    enrollmentColumnCache = {
+      idCol,
+      userCol,
+      courseCol,
+      dateCol,
+      gradeCol
+    };
+    return callback(null, enrollmentColumnCache);
+  });
+};
+
 const insertTeacherAccount = ({ username, email, hashedPassword, phoneNo, deptId }, callback) => {
   getTeacherIdAutoIncrement((metaErr, isAutoIncrement) => {
     if (metaErr) return callback(metaErr);
@@ -600,6 +682,80 @@ router.get("/api/me", (req, res) => {
     });
 });
 
+router.get("/api/my-courses", (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  if (req.session.userSource === "teacher") {
+    return res.json({ courses: [] });
+  }
+
+  getCourseColumns((courseMetaErr, courseMeta) => {
+    if (courseMetaErr) {
+      console.error(courseMetaErr);
+      return res.status(500).json({ error: "Failed to load courses schema" });
+    }
+
+    getEnrollmentColumns((enrollMetaErr, enrollMeta) => {
+      if (enrollMetaErr) {
+        console.error(enrollMetaErr);
+        return res.status(500).json({ error: "Failed to load enrollment schema" });
+      }
+
+      getDeptColumns((deptMetaErr, deptMeta) => {
+        if (deptMetaErr) {
+          console.error(deptMetaErr);
+          return res.status(500).json({ error: "Failed to load department schema" });
+        }
+
+        const { idCol, nameCol, creditsCol, deptCol, teacherCol } = courseMeta;
+        const creditsSelect = creditsCol ? `c.${creditsCol} AS credits` : "NULL AS credits";
+        const enrollmentDateSelect = enrollMeta.dateCol
+          ? `e.${enrollMeta.dateCol} AS enrollment_date`
+          : "NULL AS enrollment_date";
+        const deptSelect = deptCol ? `d.${deptMeta.nameCol} AS dept_name` : "NULL AS dept_name";
+        const teacherSelect = teacherCol ? "t.name AS teacher_name" : "NULL AS teacher_name";
+        const deptJoin = deptCol
+          ? `LEFT JOIN ${DEPT_TABLE} d ON d.${deptMeta.idCol} = c.${deptCol}`
+          : `LEFT JOIN ${DEPT_TABLE} d ON 1 = 0`;
+        const teacherJoin = teacherCol
+          ? `LEFT JOIN ${TEACHER_TABLE} t ON t.teacher_id = c.${teacherCol}`
+          : `LEFT JOIN ${TEACHER_TABLE} t ON 1 = 0`;
+        const sortClause = enrollMeta.dateCol
+          ? `e.${enrollMeta.dateCol} DESC, c.${nameCol} ASC`
+          : enrollMeta.idCol
+            ? `e.${enrollMeta.idCol} DESC, c.${nameCol} ASC`
+            : `c.${nameCol} ASC`;
+
+        db.query(
+          `SELECT c.${idCol} AS course_id, c.${nameCol} AS course_name, ${creditsSelect}, ${deptSelect}, ${teacherSelect}, ${enrollmentDateSelect}
+           FROM ${ENROLL_TABLE} e
+           JOIN ${COURSE_TABLE} c ON c.${idCol} = e.${enrollMeta.courseCol}
+           ${deptJoin}
+           ${teacherJoin}
+           WHERE e.${enrollMeta.userCol} = ?
+           ORDER BY ${sortClause}`,
+          [req.session.userId],
+          (err, rows) => {
+            if (err) {
+              console.error(err);
+              return res.status(500).json({ error: "Failed to load enrolled courses" });
+            }
+
+            const courses = (rows || []).map((course) => ({
+              ...course,
+              video_path: resolveCourseVideoPath(course.course_name)
+            }));
+
+            return res.json({ courses });
+          }
+        );
+      });
+    });
+  });
+});
+
 router.post("/api/enroll", (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Please log in first" });
@@ -617,41 +773,68 @@ router.post("/api/enroll", (req, res) => {
   const userId = req.session.userId;
   const userDeptId = req.session.user && req.session.user.dept_id ? Number(req.session.user.dept_id) : null;
 
-  db.query(
-    `SELECT course_id, course_name, credits, dept_id, teacher_id
-     FROM ${COURSE_TABLE}
-     WHERE course_name = ?
-     LIMIT 1`,
-    [rawCourseName],
-    (courseErr, courseRows) => {
-      if (courseErr) {
-        console.error(courseErr);
-        return res.status(500).json({ error: "Failed to fetch course" });
+  getCourseColumns((courseMetaErr, courseMeta) => {
+    if (courseMetaErr) {
+      console.error(courseMetaErr);
+      return res.status(500).json({ error: "Failed to load courses schema" });
+    }
+
+    getEnrollmentColumns((enrollMetaErr, enrollMeta) => {
+      if (enrollMetaErr) {
+        console.error(enrollMetaErr);
+        return res.status(500).json({ error: "Failed to load enrollment schema" });
       }
 
-      const continueWithCourse = (course) => {
-        db.query(
-          `SELECT enrollment_id, enrollment_date
-           FROM ${ENROLL_TABLE}
-           WHERE auth_user_id = ? AND course_id = ?
-           LIMIT 1`,
-          [userId, course.course_id],
-          (existingErr, existingRows) => {
-            if (existingErr) {
-              console.error(existingErr);
-              return res.status(500).json({ error: "Failed to check enrollment" });
-            }
+      getDeptColumns((deptMetaErr, deptMeta) => {
+        if (deptMetaErr) {
+          console.error(deptMetaErr);
+          return res.status(500).json({ error: "Failed to load department schema" });
+        }
 
-            if (existingRows && existingRows.length > 0) {
-              db.query(
-                `SELECT c.course_name, c.credits, d.dept_name, t.name AS teacher_name, e.enrollment_date
-                 FROM ${ENROLL_TABLE} e
-                 JOIN ${COURSE_TABLE} c ON c.course_id = e.course_id
-                 LEFT JOIN ${DEPT_TABLE} d ON d.dept_id = c.dept_id
-                 LEFT JOIN ${TEACHER_TABLE} t ON t.teacher_id = c.teacher_id
-                 WHERE e.enrollment_id = ?`,
-                [existingRows[0].enrollment_id],
-                (detailErr, detailRows) => {
+        const { idCol, nameCol, creditsCol, deptCol, teacherCol, idAutoIncrement } = courseMeta;
+        const creditsSelect = creditsCol ? `c.${creditsCol} AS credits` : "NULL AS credits";
+        const enrollmentDateSelect = enrollMeta.dateCol
+          ? `e.${enrollMeta.dateCol} AS enrollment_date`
+          : "NULL AS enrollment_date";
+        const deptJoin = deptCol
+          ? `LEFT JOIN ${DEPT_TABLE} d ON d.${deptMeta.idCol} = c.${deptCol}`
+          : `LEFT JOIN ${DEPT_TABLE} d ON 1 = 0`;
+        const teacherJoin = teacherCol
+          ? `LEFT JOIN ${TEACHER_TABLE} t ON t.teacher_id = c.${teacherCol}`
+          : `LEFT JOIN ${TEACHER_TABLE} t ON 1 = 0`;
+
+        const fetchEnrollmentDetailsByUserCourse = (studentId, selectedCourseId, onDone) => {
+          const detailOrder = enrollMeta.dateCol
+            ? ` ORDER BY e.${enrollMeta.dateCol} DESC`
+            : "";
+          db.query(
+            `SELECT c.${nameCol} AS course_name, ${creditsSelect}, d.${deptMeta.nameCol} AS dept_name, t.name AS teacher_name, ${enrollmentDateSelect}
+             FROM ${ENROLL_TABLE} e
+             JOIN ${COURSE_TABLE} c ON c.${idCol} = e.${enrollMeta.courseCol}
+             ${deptJoin}
+             ${teacherJoin}
+             WHERE e.${enrollMeta.userCol} = ? AND e.${enrollMeta.courseCol} = ?${detailOrder}
+             LIMIT 1`,
+            [studentId, selectedCourseId],
+            onDone
+          );
+        };
+
+        const continueWithCourse = (course) => {
+          db.query(
+            `SELECT 1
+             FROM ${ENROLL_TABLE}
+             WHERE ${enrollMeta.userCol} = ? AND ${enrollMeta.courseCol} = ?
+             LIMIT 1`,
+            [userId, course.course_id],
+            (existingErr, existingRows) => {
+              if (existingErr) {
+                console.error(existingErr);
+                return res.status(500).json({ error: "Failed to check enrollment" });
+              }
+
+              if (existingRows && existingRows.length > 0) {
+                fetchEnrollmentDetailsByUserCourse(userId, course.course_id, (detailErr, detailRows) => {
                   if (detailErr) {
                     console.error(detailErr);
                     return res.status(500).json({ error: "Failed to load enrollment details" });
@@ -659,32 +842,47 @@ router.post("/api/enroll", (req, res) => {
                   return res.json({
                     message: "Already enrolled in this course",
                     alreadyEnrolled: true,
-                    enrollment: detailRows[0] || null
+                    enrollment: detailRows[0]
+                      ? {
+                          ...detailRows[0],
+                          video_path: resolveCourseVideoPath(detailRows[0].course_name)
+                        }
+                      : null
                   });
-                }
-              );
-              return;
-            }
+                });
+                return;
+              }
 
-            db.query(
-              `INSERT INTO ${ENROLL_TABLE} (grade, enrollment_date, auth_user_id, course_id)
-               VALUES (NULL, CURDATE(), ?, ?)`,
-              [userId, course.course_id],
-              (insertErr, insertResult) => {
-                if (insertErr) {
-                  console.error(insertErr);
-                  return res.status(500).json({ error: "Failed to enroll in course" });
-                }
+              const enrollInsertCols = [];
+              const enrollInsertValues = [];
+              const enrollInsertPlaceholders = [];
 
-                db.query(
-                  `SELECT c.course_name, c.credits, d.dept_name, t.name AS teacher_name, e.enrollment_date
-                   FROM ${ENROLL_TABLE} e
-                   JOIN ${COURSE_TABLE} c ON c.course_id = e.course_id
-                   LEFT JOIN ${DEPT_TABLE} d ON d.dept_id = c.dept_id
-                   LEFT JOIN ${TEACHER_TABLE} t ON t.teacher_id = c.teacher_id
-                   WHERE e.enrollment_id = ?`,
-                  [insertResult.insertId],
-                  (detailErr, detailRows) => {
+              if (enrollMeta.gradeCol) {
+                enrollInsertCols.push(enrollMeta.gradeCol);
+                enrollInsertPlaceholders.push("NULL");
+              }
+              if (enrollMeta.dateCol) {
+                enrollInsertCols.push(enrollMeta.dateCol);
+                enrollInsertPlaceholders.push("CURDATE()");
+              }
+              enrollInsertCols.push(enrollMeta.userCol);
+              enrollInsertPlaceholders.push("?");
+              enrollInsertValues.push(userId);
+              enrollInsertCols.push(enrollMeta.courseCol);
+              enrollInsertPlaceholders.push("?");
+              enrollInsertValues.push(course.course_id);
+
+              db.query(
+                `INSERT INTO ${ENROLL_TABLE} (${enrollInsertCols.join(", ")})
+                 VALUES (${enrollInsertPlaceholders.join(", ")})`,
+                enrollInsertValues,
+                (insertErr, insertResult) => {
+                  if (insertErr) {
+                    console.error(insertErr);
+                    return res.status(500).json({ error: "Failed to enroll in course" });
+                  }
+
+                  fetchEnrollmentDetailsByUserCourse(userId, course.course_id, (detailErr, detailRows) => {
                     if (detailErr) {
                       console.error(detailErr);
                       return res.status(500).json({ error: "Enrollment succeeded but detail fetch failed" });
@@ -692,39 +890,105 @@ router.post("/api/enroll", (req, res) => {
                     return res.json({
                       message: "Enrollment successful",
                       alreadyEnrolled: false,
-                      enrollment: detailRows[0] || null
+                      enrollment: detailRows[0]
+                        ? {
+                            ...detailRows[0],
+                            video_path: resolveCourseVideoPath(detailRows[0].course_name)
+                          }
+                        : null
                     });
+                  });
+                }
+              );
+            }
+          );
+        };
+
+        db.query(
+          `SELECT ${idCol} AS course_id, ${nameCol} AS course_name
+           FROM ${COURSE_TABLE}
+           WHERE ${nameCol} = ?
+           LIMIT 1`,
+          [rawCourseName],
+          (courseErr, courseRows) => {
+            if (courseErr) {
+              console.error(courseErr);
+              return res.status(500).json({ error: "Failed to fetch course" });
+            }
+
+            if (courseRows && courseRows.length > 0) {
+              continueWithCourse(courseRows[0]);
+              return;
+            }
+
+            const columns = [];
+            const placeholders = [];
+            const values = [];
+
+            if (!idAutoIncrement) {
+              columns.push(idCol);
+              placeholders.push("?");
+              values.push(null);
+            }
+            columns.push(nameCol);
+            placeholders.push("?");
+            values.push(rawCourseName);
+
+            if (creditsCol) {
+              columns.push(creditsCol);
+              placeholders.push("?");
+              values.push(3);
+            }
+            if (deptCol) {
+              columns.push(deptCol);
+              placeholders.push("?");
+              values.push(Number.isInteger(userDeptId) ? userDeptId : null);
+            }
+            if (teacherCol) {
+              columns.push(teacherCol);
+              placeholders.push("?");
+              values.push(null);
+            }
+
+            const executeInsert = (finalValues) => {
+              db.query(
+                `INSERT INTO ${COURSE_TABLE} (${columns.join(", ")}) VALUES (${placeholders.join(", ")})`,
+                finalValues,
+                (insertCourseErr, insertCourseResult) => {
+                  if (insertCourseErr) {
+                    console.error(insertCourseErr);
+                    return res.status(500).json({ error: "Failed to create course before enrollment" });
                   }
-                );
-              }
-            );
+
+                  continueWithCourse({
+                    course_id: idAutoIncrement ? insertCourseResult.insertId : finalValues[0],
+                    course_name: rawCourseName
+                  });
+                }
+              );
+            };
+
+            if (!idAutoIncrement) {
+              db.query(
+                `SELECT COALESCE(MAX(${idCol}), 0) + 1 AS next_id FROM ${COURSE_TABLE}`,
+                (nextErr, nextRows) => {
+                  if (nextErr) {
+                    console.error(nextErr);
+                    return res.status(500).json({ error: "Failed to assign new course id" });
+                  }
+                  values[0] = nextRows[0].next_id;
+                  executeInsert(values);
+                }
+              );
+              return;
+            }
+
+            executeInsert(values);
           }
         );
-      };
-
-      if (courseRows && courseRows.length > 0) {
-        continueWithCourse(courseRows[0]);
-        return;
-      }
-
-      db.query(
-        `INSERT INTO ${COURSE_TABLE} (course_name, credits, dept_id, teacher_id)
-         VALUES (?, ?, ?, NULL)`,
-        [rawCourseName, 3, Number.isInteger(userDeptId) ? userDeptId : null],
-        (insertCourseErr, insertCourseResult) => {
-          if (insertCourseErr) {
-            console.error(insertCourseErr);
-            return res.status(500).json({ error: "Failed to create course before enrollment" });
-          }
-
-          continueWithCourse({
-            course_id: insertCourseResult.insertId,
-            course_name: rawCourseName
-          });
-        }
-      );
-    }
-  );
+      });
+    });
+  });
 });
 
 router.post("/api/enroll-request", (req, res) => {
