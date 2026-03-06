@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Courses | Learnix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    :root {
+      --primary-blue: #2563eb;
+      --primary-green: #22c55e;
+      --text-dark: #1f2937;
+      --text-light: #6b7280;
+      --bg-light: #f8fbff;
+      --card-bg: #ffffff;
+      --border-radius: 16px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    body {
+      background: var(--bg-light);
+      color: var(--text-dark);
+    }
+
+    /* ---------- HEADER ---------- */
+    header {
+      background: #fff;
+      padding: 18px 8%;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary-green);
+    }
+
+    .logo-icon {
+      font-size: 1.6rem;
+      margin-right: 8px;
+    }
+
+    nav a {
+      margin-left: 24px;
+      text-decoration: none;
+      color: var(--text-dark);
+      font-weight: 500;
+    }
+
+    /* ---------- HERO ---------- */
+    .hero {
+      text-align: left;
+      padding: 40px 8% 24px;
+      background: linear-gradient(to bottom, #f4f9ff, #ffffff);
+    }
+
+    .hero span {
+      background: #e8f1ff;
+      color: var(--primary-blue);
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 14px;
+      display: inline-block;
+      margin-bottom: 15px;
+    }
+
+    .hero h1 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .hero h1 span {
+      color: var(--primary-green);
+    }
+
+    .hero p {
+      max-width: 700px;
+      margin: 0;
+      color: var(--text-light);
+      font-size: 17px;
+    }
+
+    /* ---------- COURSES ---------- */
+    .courses {
+      padding: 28px 8% 50px;
+    }
+
+    .courses h2 {
+      text-align: left;
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+
+    .courses p {
+      text-align: left;
+      color: var(--text-light);
+      margin-bottom: 30px;
+    }
+
+    .course-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .course-card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .course-card:hover {
+      transform: translateY(-8px);
+    }
+
+    .badge {
+      display: inline-block;
+      background: #e8f1ff;
+      color: var(--primary-blue);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .course-card h3 {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    .course-card p {
+      font-size: 15px;
+      color: var(--text-light);
+      margin-bottom: 20px;
+    }
+
+    .course-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      margin-bottom: 20px;
+      color: var(--text-light);
+    }
+
+    /* ---------- BUTTONS ---------- */
+    .course-card button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--primary-blue);
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .course-card button:hover {
+      background: #1e4fd8;
+    }
+
+    .sample-btn {
+      background: #ffffff;
+      color: var(--primary-blue);
+      border: 2px solid var(--primary-blue);
+    }
+
+    .sample-btn:hover {
+      background: #e8f1ff;
+    }
+
+    .enroll-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+
+    .enroll-modal.open {
+      display: flex;
+    }
+
+    .enroll-panel {
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+      padding: 20px;
+    }
+
+    .enroll-panel h3 {
+      margin-bottom: 8px;
+      font-size: 24px;
+      color: var(--text-dark);
+    }
+
+    .enroll-panel p {
+      text-align: left;
+      margin-bottom: 14px;
+      color: var(--text-light);
+    }
+
+    .enroll-input {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 9px;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .enroll-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .enroll-actions button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .enroll-submit {
+      background: var(--primary-blue);
+      color: #fff;
+    }
+
+    .enroll-cancel {
+      background: #fff;
+      color: var(--primary-blue);
+      border: 2px solid var(--primary-blue) !important;
+    }
+
+    .enroll-status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--primary-blue);
+      min-height: 20px;
+    }
+
+    .enroll-status.error {
+      color: #dc2626;
+    }
+
+    .teacher-upload-fab {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 1001;
+      border: none;
+      border-radius: 999px;
+      background: #22c55e;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 14px 18px;
+      box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+      cursor: pointer;
+      display: none;
+    }
+
+    .teacher-upload-fab.visible {
+      display: inline-block;
+    }
+
+    .teacher-upload-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1100;
+    }
+
+    .teacher-upload-modal.open {
+      display: flex;
+    }
+
+    .teacher-upload-panel {
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+      padding: 20px;
+    }
+
+    .teacher-upload-panel h3 {
+      margin-bottom: 8px;
+      font-size: 24px;
+      color: var(--text-dark);
+    }
+
+    .teacher-upload-panel p {
+      text-align: left;
+      margin-bottom: 14px;
+      color: var(--text-light);
+    }
+
+    .teacher-upload-status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--primary-blue);
+      min-height: 20px;
+      text-align: left;
+    }
+
+    .teacher-upload-status.error {
+      color: #dc2626;
+    }
+
+    /* ---------- CTA ---------- */
+    .cta {
+      background: linear-gradient(135deg, #2563eb, #22c55e);
+      color: #fff;
+      text-align: center;
+      padding: 80px 10%;
+      margin-top: 40px;
+    }
+
+    .cta h2 {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+
+    .cta p {
+      max-width: 650px;
+      margin: auto;
+      margin-bottom: 20px;
+      opacity: 0.9;
+    }
+
+    .cta button {
+      background: #fff;
+      color: var(--primary-blue);
+      padding: 14px 30px;
+      border-radius: 30px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ---------- FOOTER ---------- */
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: var(--text-light);
+      background: #f1f5f9;
+    }
+
+    /* ---------- DARK MODE ---------- */
+    body.dark {
+      background: #020617;
+      color: #e5e7eb;
+    }
+
+    body.dark header {
+      background: #0f172a;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    }
+
+    body.dark nav a {
+      color: #93c5fd;
+    }
+
+    body.dark .hero {
+      background: linear-gradient(to bottom, #0b1226, #020617);
+    }
+
+    body.dark .hero p,
+    body.dark .courses p,
+    body.dark .course-meta,
+    body.dark .course-card p,
+    body.dark footer {
+      color: #cbd5e1;
+    }
+
+    body.dark .hero span,
+    body.dark .badge {
+      background: #1e293b;
+      color: #93c5fd;
+    }
+
+    body.dark .course-card,
+    body.dark .enroll-panel,
+    body.dark .teacher-upload-panel {
+      background: #0f172a;
+      color: #e5e7eb;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+
+    body.dark .enroll-input {
+      background: #020617;
+      color: #e5e7eb;
+      border-color: #334155;
+    }
+
+    body.dark .sample-btn,
+    body.dark .enroll-cancel {
+      background: #0f172a;
+      color: #93c5fd;
+      border-color: #3b82f6 !important;
+    }
+
+    body.dark footer {
+      background: #0f172a;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo"><span class="logo-icon">📖</span> Learnix</div>
+  <nav>
+    <a href="/pages/home.html">Home</a>
+    <a href="#">Features</a>
+    <a href="/pages/courses.html">Courses</a>
+    <a href="#">About</a>
+    <a href="#">Contact</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <span>📘 Explore Our Courses</span>
+  <h1>Learn New Skills <span>Anytime</span></h1>
+  <p>Choose from industry-focused courses designed to help you build real-world skills and accelerate your career.</p>
+</section>
+
+<section class="courses">
+  <h2>Popular Courses</h2>
+  <p>Hand-picked courses taught by expert instructors</p>
+
+  <div id="course-grid" class="course-grid">
+
+    <div class="course-card">
+      <div class="badge">Beginner</div>
+      <h3>Web Development</h3>
+      <p>Learn HTML, CSS, JavaScript and build responsive websites.</p>
+      <div class="course-meta">
+        <span>⏱ 8 Weeks</span>
+        <span>👨‍🏫 Live</span>
+      </div>
+      <button class="enroll-now-btn" data-course="Web Development" data-video="/pages/webdev-video.html">Enroll Now</button>
+      <button class="sample-btn" data-video="/pages/webdev-video.html">Sample Video</button>
+    </div>
+
+    <div class="course-card">
+      <div class="badge">Intermediate</div>
+      <h3>Python Programming</h3>
+      <p>Master Python for automation and real-world applications.</p>
+      <div class="course-meta">
+        <span>⏱ 6 Weeks</span>
+        <span>👨‍🏫 Live</span>
+      </div>
+      <button class="enroll-now-btn" data-course="Python Programming" data-video="/pages/python-video.html">Enroll Now</button>
+      <button class="sample-btn" data-video="/pages/python-video.html">Sample Video</button>
+    </div>
+
+    <div class="course-card">
+      <div class="badge">Advanced</div>
+      <h3>Data Science</h3>
+      <p>Learn data analysis, visualization, and machine learning.</p>
+      <div class="course-meta">
+        <span>⏱ 10 Weeks</span>
+        <span>📊 Project-Based</span>
+      </div>
+      <button class="enroll-now-btn" data-course="Data Science" data-video="/pages/ds-video.html">Enroll Now</button>
+      <button class="sample-btn" data-video="/pages/ds-video.html">Sample Video</button>
+    </div>
+
+    <div class="course-card">
+      <div class="badge">Professional</div>
+      <h3>UI / UX Design</h3>
+      <p>Design user-friendly interfaces using best practices.</p>
+      <div class="course-meta">
+        <span>⏱ 5 Weeks</span>
+        <span>🎨 Creative</span>
+      </div>
+      <button class="enroll-now-btn" data-course="UI / UX Design" data-video="/pages/uiux-video.html">Enroll Now</button>
+      <button class="sample-btn" data-video="/pages/uiux-video.html">Sample Video</button>
+    </div>
+
+  </div>
+</section>
+
+<section class="cta">
+  <h2>Start Learning Today</h2>
+  <p>Join thousands of students building skills with Learnix.</p>
+  <button>Get Started Free</button>
+</section>
+
+<footer>
+  © 2023 Learnix. All rights reserved.
+</footer>
+
+<div id="enroll-modal" class="enroll-modal">
+  <div class="enroll-panel">
+    <h3>Course Enrollment</h3>
+    <p id="enroll-course-label"></p>
+    <input id="enroll-name" class="enroll-input" type="text" placeholder="Full Name" maxlength="100">
+    <input id="enroll-email" class="enroll-input" type="email" placeholder="Email" maxlength="150">
+    <input id="enroll-phone" class="enroll-input" type="tel" placeholder="Phone (10 digits)" maxlength="10">
+    <input id="enroll-department" class="enroll-input" type="text" placeholder="Department (optional)">
+    <div class="enroll-actions">
+      <button id="enroll-submit-btn" class="enroll-submit">Submit & Continue</button>
+      <button id="enroll-cancel-btn" class="enroll-cancel">Cancel</button>
+    </div>
+    <div id="enroll-status" class="enroll-status"></div>
+  </div>
+</div>
+
+<button id="teacher-upload-fab" class="teacher-upload-fab">Upload Video</button>
+
+<div id="teacher-upload-modal" class="teacher-upload-modal">
+  <div class="teacher-upload-panel">
+    <h3>Upload Course Video</h3>
+    <p>Teacher upload panel</p>
+    <input id="teacher-course-name" class="enroll-input" type="text" placeholder="Course Name">
+    <input id="teacher-video-file" class="enroll-input" type="file" accept="video/*">
+    <div class="enroll-actions">
+      <button id="teacher-upload-submit" class="enroll-submit">Upload</button>
+      <button id="teacher-upload-cancel" class="enroll-cancel">Cancel</button>
+    </div>
+    <div id="teacher-upload-status" class="teacher-upload-status"></div>
+  </div>
+</div>
+
+<script>
+  const enrollModal = document.getElementById('enroll-modal');
+  const enrollCourseLabel = document.getElementById('enroll-course-label');
+  const enrollName = document.getElementById('enroll-name');
+  const enrollEmail = document.getElementById('enroll-email');
+  const enrollPhone = document.getElementById('enroll-phone');
+  const enrollDepartment = document.getElementById('enroll-department');
+  const enrollSubmitBtn = document.getElementById('enroll-submit-btn');
+  const enrollCancelBtn = document.getElementById('enroll-cancel-btn');
+  const enrollStatus = document.getElementById('enroll-status');
+  const courseGrid = document.getElementById('course-grid');
+  let enrollNowButtons = [];
+  const teacherUploadFab = document.getElementById('teacher-upload-fab');
+  const teacherUploadModal = document.getElementById('teacher-upload-modal');
+  const teacherCourseName = document.getElementById('teacher-course-name');
+  const teacherVideoFile = document.getElementById('teacher-video-file');
+  const teacherUploadSubmit = document.getElementById('teacher-upload-submit');
+  const teacherUploadCancel = document.getElementById('teacher-upload-cancel');
+  const teacherUploadStatus = document.getElementById('teacher-upload-status');
+
+  let selectedCourseName = '';
+  let selectedVideoPath = '';
+  let currentUser = null;
+  const enrolledCoursesByName = new Map();
+  const defaultCourseDescriptions = {
+    'web development': 'Learn HTML, CSS, JavaScript and build responsive websites.',
+    'python programming': 'Master Python for automation and real-world applications.',
+    'data science': 'Learn data analysis, visualization, and machine learning.',
+    'ui / ux design': 'Design user-friendly interfaces using best practices.'
+  };
+
+  function normalizeCourseName(name) {
+    return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function redirectToCourse(videoPath) {
+    const separator = videoPath.includes('?') ? '&' : '?';
+    window.location.href = `${videoPath}${separator}enrolled=1`;
+  }
+
+  function getAllEnrollButtons() {
+    return Array.from(document.querySelectorAll('.enroll-now-btn'));
+  }
+
+  function refreshEnrollButtonLabels() {
+    enrollNowButtons = getAllEnrollButtons();
+    enrollNowButtons.forEach((btn) => {
+      const key = normalizeCourseName(btn.dataset.course);
+      if (enrolledCoursesByName.has(key)) {
+        btn.textContent = 'Go to Course';
+      } else {
+        btn.textContent = 'Enroll Now';
+      }
+    });
+  }
+
+  function upsertCourseCard(course) {
+    if (!course || !course.course_name) return;
+
+    const normalizedName = normalizeCourseName(course.course_name);
+    const safeCourseName = String(course.course_name);
+    const safeVideoPath = String(course.video_path || '/pages/courses.html');
+    const description =
+      defaultCourseDescriptions[normalizedName] || 'Teacher-uploaded course content.';
+
+    const existingBtn = Array.from(document.querySelectorAll('.enroll-now-btn')).find(
+      (btn) => normalizeCourseName(btn.dataset.course) === normalizedName
+    );
+
+    if (existingBtn) {
+      existingBtn.dataset.video = safeVideoPath;
+      const card = existingBtn.closest('.course-card');
+      if (card) {
+        const sampleBtn = card.querySelector('.sample-btn');
+        if (sampleBtn) sampleBtn.dataset.video = safeVideoPath;
+      }
+      return;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'course-card';
+    card.innerHTML = `
+      <div class="badge">Teacher Added</div>
+      <h3></h3>
+      <p></p>
+      <div class="course-meta">
+        <span>Self-paced</span>
+        <span>Video</span>
+      </div>
+      <button class="enroll-now-btn" data-course=""></button>
+      <button class="sample-btn" data-video="">Sample Video</button>
+    `;
+
+    const titleNode = card.querySelector('h3');
+    if (titleNode) titleNode.textContent = safeCourseName;
+    const descriptionNode = card.querySelector('p');
+    if (descriptionNode) descriptionNode.textContent = description;
+
+    const enrollBtn = card.querySelector('.enroll-now-btn');
+    if (enrollBtn) {
+      enrollBtn.dataset.course = safeCourseName;
+      enrollBtn.dataset.video = safeVideoPath;
+      enrollBtn.textContent = 'Enroll Now';
+    }
+
+    const sampleBtn = card.querySelector('.sample-btn');
+    if (sampleBtn) {
+      sampleBtn.dataset.video = safeVideoPath;
+    }
+
+    courseGrid.appendChild(card);
+  }
+
+  async function loadAndRenderCourses() {
+    try {
+      const res = await fetch('/api/courses', { credentials: 'include' });
+      if (!res.ok) return;
+      const payload = await res.json();
+      const courses = Array.isArray(payload.courses) ? payload.courses : [];
+      courses.forEach((course) => upsertCourseCard(course));
+      refreshEnrollButtonLabels();
+    } catch (err) {}
+  }
+
+  async function prefillFromAuthUser() {
+    try {
+      let user = currentUser;
+      if (!user) {
+        const res = await fetch('/api/me', { credentials: 'include' });
+        if (!res.ok) return;
+        user = await res.json();
+        currentUser = user;
+      }
+
+      if (!enrollName.value && user.username) enrollName.value = user.username;
+      if (!enrollEmail.value && user.email) enrollEmail.value = user.email;
+      if (!enrollPhone.value && user.phone_no) enrollPhone.value = user.phone_no;
+      if (!enrollDepartment.value && user.department) enrollDepartment.value = user.department;
+    } catch (e) {}
+  }
+
+  function openEnrollModal(courseName, videoPath) {
+    selectedCourseName = courseName;
+    selectedVideoPath = videoPath;
+    enrollCourseLabel.textContent = `Course: ${courseName}`;
+    enrollStatus.textContent = '';
+    enrollStatus.className = 'enroll-status';
+    enrollModal.classList.add('open');
+    prefillFromAuthUser();
+  }
+
+  function closeEnrollModal() {
+    enrollModal.classList.remove('open');
+  }
+
+  function openTeacherUploadModal() {
+    teacherUploadStatus.textContent = '';
+    teacherUploadStatus.className = 'teacher-upload-status';
+    teacherUploadModal.classList.add('open');
+  }
+
+  function closeTeacherUploadModal() {
+    teacherUploadModal.classList.remove('open');
+  }
+
+  function isValidEnrollmentEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function isValidEnrollmentPhone(phone) {
+    return /^\d{10}$/.test(phone);
+  }
+
+  async function loadEnrollmentStateForLoggedInUser() {
+    refreshEnrollButtonLabels();
+    try {
+      const meRes = await fetch('/api/me', { credentials: 'include' });
+      if (!meRes.ok) return;
+      currentUser = await meRes.json();
+
+      if (currentUser.role === 'teacher') {
+        teacherUploadFab.classList.add('visible');
+        return;
+      }
+
+      if (currentUser.role !== 'student') {
+        return;
+      }
+
+      const myCoursesRes = await fetch('/api/my-courses', { credentials: 'include' });
+      if (!myCoursesRes.ok) return;
+      const payload = await myCoursesRes.json();
+      const courses = Array.isArray(payload.courses) ? payload.courses : [];
+
+      courses.forEach((course) => {
+        enrolledCoursesByName.set(
+          normalizeCourseName(course.course_name),
+          course.video_path || '/pages/courses.html'
+        );
+      });
+
+      refreshEnrollButtonLabels();
+    } catch (err) {}
+  }
+
+  async function submitEnrollmentAndRedirect() {
+    const studentName = enrollName.value.trim();
+    const studentEmail = enrollEmail.value.trim();
+    const studentPhone = enrollPhone.value.trim();
+    const department = enrollDepartment.value.trim();
+
+    if (!studentName || !studentEmail || !studentPhone) {
+      enrollStatus.textContent = 'Name, email and phone are required.';
+      enrollStatus.className = 'enroll-status error';
+      return;
+    }
+
+    if (studentName.length < 2) {
+      enrollStatus.textContent = 'Enter a valid full name.';
+      enrollStatus.className = 'enroll-status error';
+      return;
+    }
+
+    if (!isValidEnrollmentEmail(studentEmail)) {
+      enrollStatus.textContent = 'Enter a valid email address.';
+      enrollStatus.className = 'enroll-status error';
+      return;
+    }
+
+    if (!isValidEnrollmentPhone(studentPhone)) {
+      enrollStatus.textContent = 'Phone number must be exactly 10 digits.';
+      enrollStatus.className = 'enroll-status error';
+      return;
+    }
+
+    enrollStatus.textContent = 'Submitting enrollment...';
+    enrollStatus.className = 'enroll-status';
+    enrollSubmitBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/enroll-request', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseName: selectedCourseName,
+          studentName,
+          studentEmail,
+          studentPhone,
+          department
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Enrollment failed');
+      }
+
+      let resolvedPath = selectedVideoPath;
+      if (currentUser && currentUser.role === 'student') {
+        const enrollRes = await fetch('/api/enroll', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ courseName: selectedCourseName })
+        });
+        const enrollData = await enrollRes.json();
+        if (!enrollRes.ok) {
+          throw new Error(enrollData.error || 'Enrollment failed');
+        }
+
+        const enrollment = enrollData.enrollment || {};
+        resolvedPath = enrollment.video_path || selectedVideoPath;
+        const normalizedKey = normalizeCourseName(selectedCourseName);
+        enrolledCoursesByName.set(normalizedKey, resolvedPath);
+        refreshEnrollButtonLabels();
+      }
+
+      enrollStatus.textContent = 'Enrollment submitted. Redirecting to course video...';
+      setTimeout(() => {
+        redirectToCourse(resolvedPath);
+      }, 500);
+    } catch (err) {
+      enrollStatus.textContent = err.message;
+      enrollStatus.className = 'enroll-status error';
+    } finally {
+      enrollSubmitBtn.disabled = false;
+    }
+  }
+
+  courseGrid.addEventListener('click', (event) => {
+    const enrollBtn = event.target.closest('.enroll-now-btn');
+    if (enrollBtn) {
+      const courseName = enrollBtn.dataset.course;
+      const videoPath = enrollBtn.dataset.video;
+      const key = normalizeCourseName(courseName);
+
+      if (currentUser && currentUser.role === 'student') {
+        if (enrolledCoursesByName.has(key)) {
+          redirectToCourse(enrolledCoursesByName.get(key));
+          return;
+        }
+        openEnrollModal(courseName, videoPath);
+        return;
+      }
+
+      if (currentUser && currentUser.role === 'teacher') {
+        alert('Teacher accounts cannot enroll in student courses.');
+        return;
+      }
+
+      openEnrollModal(courseName, videoPath);
+      return;
+    }
+
+    const sampleBtn = event.target.closest('.sample-btn');
+    if (sampleBtn && sampleBtn.dataset.video) {
+      window.location.href = sampleBtn.dataset.video;
+    }
+  });
+
+  enrollSubmitBtn.addEventListener('click', submitEnrollmentAndRedirect);
+  enrollCancelBtn.addEventListener('click', closeEnrollModal);
+  enrollModal.addEventListener('click', (e) => {
+    if (e.target === enrollModal) closeEnrollModal();
+  });
+
+  teacherUploadFab.addEventListener('click', openTeacherUploadModal);
+  teacherUploadCancel.addEventListener('click', closeTeacherUploadModal);
+  teacherUploadModal.addEventListener('click', (e) => {
+    if (e.target === teacherUploadModal) closeTeacherUploadModal();
+  });
+
+  teacherUploadSubmit.addEventListener('click', async () => {
+    const courseName = teacherCourseName.value.trim();
+    const file = teacherVideoFile.files && teacherVideoFile.files[0];
+
+    if (!courseName) {
+      teacherUploadStatus.textContent = 'Course name is required.';
+      teacherUploadStatus.className = 'teacher-upload-status error';
+      return;
+    }
+
+    if (!file) {
+      teacherUploadStatus.textContent = 'Please select a video file.';
+      teacherUploadStatus.className = 'teacher-upload-status error';
+      return;
+    }
+
+    teacherUploadSubmit.disabled = true;
+    teacherUploadStatus.textContent = 'Uploading video...';
+    teacherUploadStatus.className = 'teacher-upload-status';
+
+    try {
+      const formData = new FormData();
+      formData.append('courseName', courseName);
+      formData.append('courseVideo', file);
+
+      const res = await fetch('/api/teacher/upload-video', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData
+      });
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload.error || 'Upload failed');
+      }
+
+      teacherUploadStatus.textContent = `Uploaded: ${payload.filePath}`;
+      upsertCourseCard({
+        course_name: payload.courseName || courseName,
+        video_path: payload.filePath
+      });
+      refreshEnrollButtonLabels();
+      teacherCourseName.value = '';
+      teacherVideoFile.value = '';
+    } catch (err) {
+      teacherUploadStatus.textContent = err.message || 'Upload failed';
+      teacherUploadStatus.className = 'teacher-upload-status error';
+    } finally {
+      teacherUploadSubmit.disabled = false;
+    }
+  });
+
+  (async () => {
+    await loadAndRenderCourses();
+    await loadEnrollmentStateForLoggedInUser();
+  })();
+</script>
+<script src="/assets/js/main.js"></script>
+</body>
+</html>
+

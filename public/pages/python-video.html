@@ -251,9 +251,9 @@
 <header>
   <div class="logo"><span class="logo-icon">📖</span> Learnix</div>
   <nav>
-    <a href="index.html">Home</a>
+    <a href="/pages/home.html">Home</a>
     <a href="#">Features</a>
-    <a href="Courses.html">Courses</a>
+    <a href="/pages/courses.html">Courses</a>
     <a href="#">About</a>
     <a href="#">Contact</a>
   </nav>
@@ -261,7 +261,7 @@
 
 <section class="hero">
   <span>🎥 Sample Lecture</span>
-  <h1>UI / UX Design – Introduction</h1>
+  <h1>Python Programming – Introduction</h1>
   <p>Watch a preview of our teaching style and course content before enrolling.</p>
 </section>
 
@@ -278,17 +278,17 @@
   <div class="video-container">
     <div class="video-card">
       <h2>Course Overview</h2>
-      <p>This sample video gives you an overview of the UI / UX Design course structure, tools, and learning outcomes.</p>
+      <p>This sample video gives you an overview of the Python Programming course structure, tools, and learning outcomes.</p>
 
       <!-- Replace src with your video file or URL -->
       <video id="course-video" controls poster="https://via.placeholder.com/900x500?text=Sample+Video">
-        <source id="video-source" src="UIUX.mp4" type="video/mp4">
+        <source id="video-source" src="/assets/media/videos/Python.mp4" type="video/mp4">
         Your browser does not support the video tag.
       </video>
 
       <div class="video-actions">
         <button id="enroll-btn" class="enroll-btn">Enroll Now</button>
-        <button class="back-btn" onclick="window.location.href='Courses.html'">Back to Courses</button>
+        <button class="back-btn" onclick="window.location.href='/pages/courses.html'">Back to Courses</button>
       </div>
       <div id="enroll-form-wrap" style="display:none; margin-top: 12px;">
         <input id="student-name" class="answer-input" type="text" placeholder="Full Name">
@@ -344,7 +344,7 @@
   const studentPhoneInput = document.getElementById('student-phone');
   const studentDepartmentInput = document.getElementById('student-department');
   const submitEnrollBtn = document.getElementById('submit-enroll-btn');
-  const courseName = 'UI / UX Design';
+  const courseName = 'Python Programming';
   const isEnrolled = new URLSearchParams(window.location.search).get('enrolled') === '1';
 
   async function generateFromServer() {
@@ -377,7 +377,7 @@
   }
 
   function useSample() {
-    summaryContent.innerHTML = '<p>This sample video introduces UI / UX Design — covering the fundamentals of user interface design and user experience principles. It explains the importance of creating designs that are both visually appealing and highly functional, and how good design directly impacts user satisfaction and retention.</p><p>The lecture covers essential topics such as wireframing, prototyping, user research methods, and design tools like Figma and Adobe XD. Learners are shown real-world examples of effective UI/UX design and introduced to design principles like consistency, feedback, and usability testing for creating better products.</p>';
+    summaryContent.innerHTML = '<p>This sample video offers an introduction to Python Programming — covering the basics of Python syntax, data types, variables, and control flow. It explains why Python is popular for beginners and professionals alike, highlighting its readability and versatility across web development, data science, and automation.</p><p>The lecture introduces key concepts such as functions, lists, and dictionaries, demonstrating practical examples and best practices. Learners are shown how Python\'s large standard library and third-party packages extend its capabilities, and are introduced to common tools like Jupyter Notebook and IDEs for writing and testing Python code.</p>';
     questionsSection.style.display = 'none';
   }
 
@@ -512,6 +512,7 @@
   }
 </script>
 
+<script src="/assets/js/main.js"></script>
 </body>
 </html>
 

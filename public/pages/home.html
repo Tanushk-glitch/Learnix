@@ -1,22 +1,22 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learnix Landing Page</title>
-    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="/assets/css/main.css">
 </head>
 <body>
 
 <header class="navbar">
     <div class="logo">
-        <span class="logo-icon">ðŸ“–</span>
+        <span class="logo-icon">&#128214;</span>
         <span class="logo-text">Learnix</span>
     </div>
 
     <nav>
         <ul class="nav-links">
-            <li><a href="Courses.html">Courses</a></li>
+            <li><a href="/pages/courses.html">Courses</a></li>
             <li><a href="#">Features</a></li>
             <li><a href="#">About</a></li>
             <li><a href="#">Contact</a></li>
@@ -24,9 +24,9 @@
     </nav>
 
     <div class="nav-actions" id="navActions">
-        <!-- âœ… LOG IN NOW OPENS LOGIN PAGE -->
-        <a href="login.html" class="sign-in">Log in</a>
-        <a href="sign_up.html" class="sign-up" style="text-decoration:none;display:inline-block;">Sign Up</a>
+        <!-- Login now opens login page -->
+        <a href="/pages/login.html" class="sign-in">Log in</a>
+        <a href="/pages/signup.html" class="sign-up" style="text-decoration:none;display:inline-block;">Sign Up</a>
      
     </div>
 </header>
@@ -49,10 +49,10 @@
         </p>
 
         <div class="cta-buttons" id="heroCtaButtons">
-            <a href="login.html" id="heroGetStartedBtn" class="get-started-free" style="text-decoration:none;display:inline-block;">
+            <a href="/pages/login.html" id="heroGetStartedBtn" class="get-started-free" style="text-decoration:none;display:inline-block;">
                 Get Started Free
             </a>
-            <a href="demo.html" class="schedule-demo" style="text-decoration:none;display:inline-block;">
+            <a href="/pages/demo.html" class="schedule-demo" style="text-decoration:none;display:inline-block;">
                 Schedule a Demo
             </a>
         </div>
@@ -67,7 +67,7 @@
 <section class="section why-learnix-section" id="whyLearnixSection">
     <div class="why-learnix-header">
         <div class="premium-badge">
-            <span>âœ¨ Premium Features</span>
+            <span>&#10024; Premium Features</span>
         </div>
         <h1 class="why-learnix-title">
             Why Choose <span class="learnix-gradient">Learnix</span><span class="why-q">?</span>
@@ -121,37 +121,37 @@
         <article class="review-card">
             <div class="review-meta">
                 <strong>Riya Patil</strong>
-                <span>Data Science • Weekend Batch</span>
+                <span>Data Science � Weekend Batch</span>
             </div>
             <p>"Before joining, I could not clean datasets properly. After 6 weeks, I built my first mini project and my interview confidence improved a lot."</p>
-            <div class="review-foot">4.8/5 • Posted 3 days ago</div>
+            <div class="review-foot">4.8/5 � Posted 3 days ago</div>
         </article>
 
         <article class="review-card">
             <div class="review-meta">
                 <strong>Aman Sharma</strong>
-                <span>Python Basics • Evening Batch</span>
+                <span>Python Basics � Evening Batch</span>
             </div>
             <p>"The recorded sessions plus live doubt support really helped. I work full-time, so this format was practical and easy to follow."</p>
-            <div class="review-foot">4.7/5 • Posted 5 days ago</div>
+            <div class="review-foot">4.7/5 � Posted 5 days ago</div>
         </article>
 
         <article class="review-card">
             <div class="review-meta">
                 <strong>Neha Kulkarni</strong>
-                <span>UI/UX Fundamentals • Morning Batch</span>
+                <span>UI/UX Fundamentals � Morning Batch</span>
             </div>
             <p>"Assignments were very real-world. My portfolio now has 3 proper case studies, and I got shortlisted for two internships this week."</p>
-            <div class="review-foot">4.9/5 • Posted 1 week ago</div>
+            <div class="review-foot">4.9/5 � Posted 1 week ago</div>
         </article>
 
         <article class="review-card">
             <div class="review-meta">
                 <strong>Harsh Verma</strong>
-                <span>Machine Learning • Advanced Batch</span>
+                <span>Machine Learning � Advanced Batch</span>
             </div>
             <p>"Best part was weekly code reviews. My model evaluation mistakes reduced a lot, and I finally understood when to use precision vs recall."</p>
-            <div class="review-foot">4.8/5 • Posted 6 days ago</div>
+            <div class="review-foot">4.8/5 � Posted 6 days ago</div>
         </article>
     </div>
 </section>
@@ -179,13 +179,13 @@
     <p>&copy; 2023 Learnix. All rights reserved.</p>
 </footer>
 
-<script src="scripts/main.js"></script>
+<script src="/assets/js/main.js"></script>
 
 <script>
 const scheduleDemoBtn = document.querySelector('.schedule-demo');
 if (scheduleDemoBtn) {
   scheduleDemoBtn.addEventListener('click', function() {
-    window.location.href = 'demo.html';
+    window.location.href = '/pages/demo.html';
   });
 }
 fetch('/api/me', { credentials: 'same-origin' })
@@ -236,12 +236,12 @@ fetch('/api/me', { credentials: 'same-origin' })
         const courses = Array.isArray(payload.courses) ? payload.courses : [];
         if (courses.length === 0) {
           panel.classList.remove('open');
-          window.location.href = 'Courses.html';
+          window.location.href = '/pages/courses.html';
           return;
         }
 
         if (courses.length === 1) {
-          const videoPath = courses[0].video_path || 'Courses.html';
+          const videoPath = courses[0].video_path || '/pages/courses.html';
           const separator = videoPath.includes('?') ? '&' : '?';
           window.location.href = `${videoPath}${separator}enrolled=1`;
           return;
@@ -254,7 +254,7 @@ fetch('/api/me', { credentials: 'same-origin' })
             <p><strong>Department:</strong> ${course.dept_name || 'N/A'}</p>
             <p><strong>Teacher:</strong> ${course.teacher_name || 'N/A'}</p>
             <p><strong>Enrolled On:</strong> ${formatDate(course.enrollment_date)}</p>
-            <a class="course-open-btn" href="${course.video_path || 'Courses.html'}?enrolled=1">Open Course</a>
+            <a class="course-open-btn" href="${course.video_path || '/pages/courses.html'}?enrolled=1">Open Course</a>
           </article>
         `).join('');
         panel.scrollIntoView({ behavior: 'smooth', block: 'start' });

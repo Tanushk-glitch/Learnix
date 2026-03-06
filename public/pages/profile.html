@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Account | Learnix</title>
-  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="/assets/css/main.css">
 </head>
 <body>
   <header class="navbar">
@@ -14,7 +14,7 @@
     <nav>
       <ul class="nav-links">
         <li><a href="/dashboard">Dashboard</a></li>
-        <li><a href="home_page.html">Home</a></li>
+        <li><a href="/pages/home.html">Home</a></li>
       </ul>
     </nav>
     <div class="nav-actions">
@@ -42,6 +42,7 @@
     </section>
   </main>
 
+  <script src="/assets/js/main.js"></script>
   <script>
     function formatDate(value) {
       if (!value) return "";
@@ -79,7 +80,7 @@
       courses.forEach((course) => {
         const item = document.createElement("li");
         const link = document.createElement("a");
-        link.href = `${course.video_path || "Courses.html"}?enrolled=1`;
+        link.href = `${course.video_path || "/pages/courses.html"}?enrolled=1`;
         link.textContent = course.course_name;
         const date = formatDate(course.enrollment_date);
         if (date) {
@@ -104,7 +105,7 @@
         document.getElementById("profileDepartment").textContent = user.department || "";
         await loadMyCourses(user);
       } catch (error) {
-        window.location.href = "/login.html";
+        window.location.href = "/pages/login.html";
       }
     }
 

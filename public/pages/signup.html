@@ -1,32 +1,32 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up | Learnix</title>
-    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="/assets/css/main.css">
 </head>
 <body>
 
 <header class="navbar">
     <div class="logo">
-        <span class="logo-icon">ðŸ“–</span>
+        <span class="logo-icon">&#128214;</span>
         <span class="logo-text">Learnix</span>
     </div>
 
     <nav>
         <ul class="nav-links">
-            <li><a href="home_page.html">Home</a></li>
+            <li><a href="/pages/home.html">Home</a></li>
             <li><a href="#">Features</a></li>
-            <li><a href="Courses.html">Courses</a></li>
+            <li><a href="/pages/courses.html">Courses</a></li>
             <li><a href="#">About</a></li>
             <li><a href="#">Contact</a></li>
         </ul>
     </nav>
 
     <div class="nav-actions">
-        <a href="login.html" class="sign-in">Log in</a>
-        <a href="home_page.html" class="get-started">Back to Home</a>
+        <a href="/pages/login.html" class="sign-in">Log in</a>
+        <a href="/pages/home.html" class="get-started">Back to Home</a>
     </div>
 </header>
 
@@ -46,7 +46,7 @@
             Start your free learning journey today. No credit card required.
         </p>
 
-        <form class="demo-form" action="/signup" method="post">
+        <form id="signupForm" class="demo-form" action="/signup" method="post">
             <input type="text" name="username" placeholder="Full Name" required>
             <input type="email" name="email" placeholder="Email Address" required>
             <input type="tel" name="phone_no" placeholder="Phone Number (10 digits)" pattern="[0-9]{10}" minlength="10" maxlength="10" required>
@@ -58,15 +58,19 @@
             <input type="text" name="department" placeholder="Department" required>
             <input type="password" name="password" placeholder="Password (min. 6 characters)" required >
             <input type="password" name="confirmPassword" placeholder="Confirm Password" required > 
-            <button type="submit" class="get-started-free" style="flex-basis:100%; width:fit-content; margin:14px auto 0;">Create Account</button>
+            <button type="button" id="sendEmailCodeBtn" class="get-started-free" style="flex-basis:100%; width:fit-content; margin:6px auto 0;">Send 5-Digit OTP</button>
+            <input type="text" id="emailOtpCode" placeholder="Enter 5-digit OTP from email" pattern="[0-9]{5}" maxlength="5" style="width:100%; margin-top:10px;" required>
+            <button type="button" id="verifyEmailCodeBtn" class="get-started-free" style="flex-basis:100%; width:fit-content; margin:10px auto 0;">Verify OTP</button>
+            <button type="submit" id="createAccountBtn" class="get-started-free" style="flex-basis:100%; width:fit-content; margin:14px auto 0;" disabled>Create Account</button>
         </form>
 
         <div id="signupSuccess" style="display:none; color:#22c55e; margin-top:18px; font-weight:600;">
             Account created successfully! Welcome to Learnix. Redirecting...
         </div>
+        <div id="signupStatus" style="display:none; margin-top:14px; font-weight:600;"></div>
 
         <p style="text-align:center; margin-top:20px; color:#666;">
-            Already have an account? <a href="login.html" style="color:#2563eb; text-decoration:none; font-weight:600;">Log in here</a>
+            Already have an account? <a href="/pages/login.html" style="color:#2563eb; text-decoration:none; font-weight:600;">Log in here</a>
         </p>
     </section>
 </main>
@@ -76,6 +80,7 @@
 </footer>
 
 
-
+<script src="/assets/js/main.js"></script>
+<script type="module" src="/assets/js/firebase-signup.js"></script>
 </body>
 </html>

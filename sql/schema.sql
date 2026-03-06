@@ -39,7 +39,8 @@ create table courses(
     dept_id int,
     foreign key (dept_id) references dept(dept_id),
     teacher_id int,
-    foreign key (teacher_id) references teacher(teacher_id)
+    foreign key (teacher_id) references teacher(teacher_id),
+    video_path varchar(255) null
 );
 
 create table enrollment(

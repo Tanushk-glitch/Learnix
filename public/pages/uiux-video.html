@@ -92,71 +92,35 @@
         grid-template-columns: 28% 44% 28%;
         gap: 28px;
         align-items: start;
-    }
+      }
 
-    .summary-section {
-      background: var(--card-bg);
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      padding: 24px;
-      min-height: 220px;
-      overflow: auto;
-    }
+      .summary-section {
+        background: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        padding: 24px;
+        min-height: 220px;
+        overflow: auto;
+      }
 
-    .summary-section h3 {
-      font-size: 24px;
-      margin-bottom: 20px;
-      color: var(--primary-blue);
-    }
+      .video-container {
+        background: transparent;
+      }
 
-    .summary-section p {
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--text-dark);
-      margin-bottom: 12px;
-    }
+      .video-container .video-card {
+        max-width: 900px;
+        width: 100%;
+        margin: 0 auto;
+      }
 
-    .summary-loader {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100px;
-      color: var(--text-light);
-    }
-
-    .spinner {
-      border: 3px solid #e5e7eb;
-      border-top: 3px solid var(--primary-blue);
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 1s linear infinite;
-      margin-right: 10px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .video-container {
-      background: transparent;
-    }
-
-    .video-container .video-card {
-      max-width: 900px;
-      width: 100%;
-      margin: 0 auto;
-    }
-
-    .questions-section {
-      background: var(--card-bg);
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow);
-      padding: 24px;
-      min-height: 220px;
-      overflow: auto;
-    }
+      .questions-section {
+        background: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        padding: 24px;
+        min-height: 220px;
+        overflow: auto;
+      }
 
     .questions-section h3 {
       font-size: 24px;
@@ -226,6 +190,17 @@
       background: #000;
     }
 
+    /* Responsive: stack columns on narrow screens */
+    @media (max-width: 900px) {
+      .video-section {
+        grid-template-columns: 1fr;
+        padding: 40px 6%;
+      }
+      .summary-section, .video-container, .questions-section {
+        min-height: auto;
+      }
+    }
+
     .video-actions {
       display: flex;
       gap: 16px;
@@ -260,17 +235,6 @@
       background: #e8f1ff;
     }
 
-    /* Responsive: stack columns on narrow screens */
-    @media (max-width: 900px) {
-      .video-section {
-        grid-template-columns: 1fr;
-        padding: 40px 6%;
-      }
-      .summary-section, .video-container, .questions-section {
-        min-height: auto;
-      }
-    }
-
     /* ---------- FOOTER ---------- */
     footer {
       text-align: center;
@@ -287,9 +251,9 @@
 <header>
   <div class="logo"><span class="logo-icon">📖</span> Learnix</div>
   <nav>
-    <a href="index.html">Home</a>
+    <a href="/pages/home.html">Home</a>
     <a href="#">Features</a>
-    <a href="Courses.html">Courses</a>
+    <a href="/pages/courses.html">Courses</a>
     <a href="#">About</a>
     <a href="#">Contact</a>
   </nav>
@@ -297,36 +261,34 @@
 
 <section class="hero">
   <span>🎥 Sample Lecture</span>
-  <h1>Web Development – Introduction</h1>
+  <h1>UI / UX Design – Introduction</h1>
   <p>Watch a preview of our teaching style and course content before enrolling.</p>
 </section>
 
 <section class="video-section">
-  <!-- Summary Section (Left) -->
   <div class="summary-section">
     <h3>AI Summary</h3>
-    <div id="summary-container">Click "Generate" to create a 2–3 paragraph summary based on the video.</div>
+    <div id="summary-content">Click "Generate" to create a 2–3 paragraph summary based on the video.</div>
     <div style="margin-top:12px; display:flex; gap:8px;">
       <button id="generate-btn" class="enroll-btn">Generate Summary & Questions</button>
       <button id="sample-btn" class="back-btn">Use Sample</button>
     </div>
   </div>
 
-  <!-- Video Container (Center) -->
   <div class="video-container">
     <div class="video-card">
       <h2>Course Overview</h2>
-      <p>This sample video gives you an overview of the Web Development course structure, tools, and learning outcomes.</p>
+      <p>This sample video gives you an overview of the UI / UX Design course structure, tools, and learning outcomes.</p>
 
       <!-- Replace src with your video file or URL -->
       <video id="course-video" controls poster="https://via.placeholder.com/900x500?text=Sample+Video">
-        <source id="video-source" src="Web_dev.mp4" type="video/mp4">
+        <source id="video-source" src="/assets/media/videos/UIUX.mp4" type="video/mp4">
         Your browser does not support the video tag.
       </video>
 
       <div class="video-actions">
         <button id="enroll-btn" class="enroll-btn">Enroll Now</button>
-        <button class="back-btn" onclick="window.location.href='Courses.html'">Back to Courses</button>
+        <button class="back-btn" onclick="window.location.href='/pages/courses.html'">Back to Courses</button>
       </div>
       <div id="enroll-form-wrap" style="display:none; margin-top: 12px;">
         <input id="student-name" class="answer-input" type="text" placeholder="Full Name">
@@ -339,7 +301,6 @@
     </div>
   </div>
 
-  <!-- Questions Section (Right) -->
   <div class="questions-section" style="display: none;">
     <h3>Quiz Questions</h3>
     <div id="question-container">
@@ -359,7 +320,7 @@
 
 <script>
   // Questions will be provided by AI. Start with an empty array until generation.
-  let questionsData = [];
+  let questions = [];
 
   let currentQuestionIndex = 0;
   let attempts = 0;
@@ -372,7 +333,8 @@
 
   const generateBtn = document.getElementById('generate-btn');
   const sampleBtn = document.getElementById('sample-btn');
-  const summaryContainer = document.getElementById('summary-container');
+  const summaryContent = document.getElementById('summary-content');
+  const videoEl = document.getElementById('course-video');
   const questionsSection = document.querySelector('.questions-section');
   const enrollBtn = document.getElementById('enroll-btn');
   const enrollFeedback = document.getElementById('enroll-feedback');
@@ -382,12 +344,12 @@
   const studentPhoneInput = document.getElementById('student-phone');
   const studentDepartmentInput = document.getElementById('student-department');
   const submitEnrollBtn = document.getElementById('submit-enroll-btn');
-  const courseName = 'Web Development';
+  const courseName = 'UI / UX Design';
   const isEnrolled = new URLSearchParams(window.location.search).get('enrolled') === '1';
 
   async function generateFromServer() {
     const src = document.getElementById('video-source').getAttribute('src');
-    summaryContainer.textContent = 'Generating summary and questions...';
+    summaryContent.textContent = 'Generating summary and questions...';
     questionsSection.style.display = '';
     generateBtn.disabled = true;
     try {
@@ -398,24 +360,24 @@
       });
       if (!res.ok) throw new Error('Server error');
       const data = await res.json();
-      summaryContainer.innerHTML = data.summary_html || ('<p>' + (data.summary || 'No summary returned.') + '</p>');
+      summaryContent.innerHTML = data.summary_html || ('<p>' + (data.summary || 'No summary returned.') + '</p>');
       if (Array.isArray(data.questions) && data.questions.length) {
-        questionsData = data.questions.map(q => ({ question: q.question, answer: q.answer }));
+        questions = data.questions.map(q => ({ question: q.question, answer: q.answer }));
         currentQuestionIndex = 0; totalCorrect = 0;
         displayQuestion();
       } else {
-        questionsData = [];
-        questionText.textContent = 'No questions generated.';
+        questions = [];
+        document.getElementById('question-text').textContent = 'No questions generated.';
       }
     } catch (err) {
-      summaryContainer.textContent = 'Failed to generate: ' + err.message;
+      summaryContent.textContent = 'Failed to generate: ' + err.message;
     } finally {
       generateBtn.disabled = false;
     }
   }
 
   function useSample() {
-    summaryContainer.innerHTML = '<p>This Web Development course introduces fundamental concepts for building modern websites. You\'ll learn the three core technologies: HTML for structure, CSS for styling, and JavaScript for interactivity. The course covers responsive design principles ensuring your websites look great on all devices.</p><p>Students will explore popular web development frameworks that streamline the development process and follow industry best practices. You\'ll gain hands-on experience building real-world projects and understand the complete workflow from planning to deployment.</p>';
+    summaryContent.innerHTML = '<p>This sample video introduces UI / UX Design — covering the fundamentals of user interface design and user experience principles. It explains the importance of creating designs that are both visually appealing and highly functional, and how good design directly impacts user satisfaction and retention.</p><p>The lecture covers essential topics such as wireframing, prototyping, user research methods, and design tools like Figma and Adobe XD. Learners are shown real-world examples of effective UI/UX design and introduced to design principles like consistency, feedback, and usability testing for creating better products.</p>';
     questionsSection.style.display = 'none';
   }
 
@@ -447,6 +409,7 @@
           department
         })
       });
+
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Enrollment request failed');
@@ -475,20 +438,21 @@
   submitEnrollBtn.addEventListener('click', submitEnrollmentRequest);
 
   function displayQuestion() {
-    if (currentQuestionIndex < questionsData.length) {
-      questionText.textContent = questionsData[currentQuestionIndex].question;
+    if (currentQuestionIndex < questions.length) {
+      questionText.textContent = questions[currentQuestionIndex].question;
       answerInput.value = '';
       feedback.textContent = '';
       feedback.className = 'feedback';
-      attempts = 0;
+      attempts = 0; // Reset attempts for new question
       // Ensure input is visible and enabled for answering
       answerInput.style.display = '';
       answerInput.disabled = false;
       submitBtn.style.display = '';
       submitBtn.disabled = false;
     } else {
-      if (questionsData.length === 0) {
+      if (questions.length === 0) {
         questionText.textContent = 'No questions yet. Click "Generate Summary & Questions" to create quiz items.';
+        // keep the answer box visible but disabled so users know where to answer
         answerInput.style.display = '';
         answerInput.value = '';
         answerInput.disabled = true;
@@ -496,7 +460,7 @@
         submitBtn.disabled = true;
         feedback.textContent = '';
       } else {
-        questionText.textContent = `Quiz completed! You got ${totalCorrect} out of ${questionsData.length} questions correct.`;
+        questionText.textContent = `Quiz completed! You got ${totalCorrect} out of ${questions.length} questions correct.`;
         answerInput.style.display = '';
         answerInput.disabled = true;
         submitBtn.style.display = '';
@@ -508,21 +472,21 @@
 
   function checkAnswer() {
     const userAnswer = answerInput.value.trim().toLowerCase();
-    const correctAnswer = questionsData[currentQuestionIndex].answer.toLowerCase();
+    const correctAnswer = questions[currentQuestionIndex].answer.toLowerCase();
 
     if (userAnswer === correctAnswer) {
       feedback.textContent = "Correct! Moving to next question.";
       feedback.className = 'feedback';
       totalCorrect++;
       currentQuestionIndex++;
-      setTimeout(displayQuestion, 1500);
+      setTimeout(displayQuestion, 1500); // Delay to show feedback
     } else {
       attempts++;
       if (attempts >= 3) {
-        feedback.textContent = `Wrong answer. The correct answer is: ${questionsData[currentQuestionIndex].answer}. Moving to next question.`;
+        feedback.textContent = `Wrong answer. The correct answer is: ${questions[currentQuestionIndex].answer}. Moving to next question.`;
         feedback.className = 'feedback wrong';
         currentQuestionIndex++;
-        setTimeout(displayQuestion, 3000);
+        setTimeout(displayQuestion, 3000); // Longer delay to show answer
       } else {
         feedback.textContent = `Wrong answer (${attempts}/3). Try again.`;
         feedback.className = 'feedback wrong';
@@ -541,11 +505,14 @@
 
   // Initialize first question
   displayQuestion();
+
   if (isEnrolled) {
     questionsSection.style.display = '';
     generateFromServer();
   }
 </script>
 
+<script src="/assets/js/main.js"></script>
 </body>
 </html>
+
