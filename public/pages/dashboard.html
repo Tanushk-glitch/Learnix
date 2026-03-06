@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard | Learnix</title>
-  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="/assets/css/main.css">
 </head>
 <body>
   <header class="navbar">
@@ -13,8 +13,8 @@
     </div>
     <nav>
       <ul class="nav-links">
-        <li><a href="home_page.html">Home</a></li>
-        <li><a href="Courses.html">Courses</a></li>
+        <li><a href="/pages/home.html">Home</a></li>
+        <li><a href="/pages/courses.html">Courses</a></li>
       </ul>
     </nav>
     <div class="nav-actions">
@@ -34,10 +34,11 @@
       <p class="subtitle">
         <span id="welcomeUser">Loading...</span>
       </p>
-      <a href="home_page.html" class="get-started-free">Go to Home</a>
+      <a href="/pages/home.html" class="get-started-free">Go to Home</a>
     </section>
   </main>
 
+  <script src="/assets/js/main.js"></script>
   <script>
     async function loadDashboardUser() {
       try {
@@ -50,7 +51,7 @@
         const username = user.username || "User";
         document.getElementById("welcomeUser").textContent = `Welcome to Learnix, ${username}`;
       } catch (error) {
-        window.location.href = "/login.html";
+        window.location.href = "/pages/login.html";
       }
     }
 

@@ -1,5 +1,6 @@
-﻿const express = require("express");
+const express = require("express");
 const bcrypt = require("bcrypt");
+const nodemailer = require("nodemailer");
 const db = require("../config/database");
 const path = require("path");
 
@@ -16,11 +17,38 @@ let courseColumnCache = null;
 let enrollmentColumnCache = null;
 
 const COURSE_VIDEO_MAP = {
-  "web development": "Sample_vid.html",
-  "python programming": "Python_vid.html",
-  "data science": "DS_vid.html",
-  "ui / ux design": "UIUX_vid.html",
-  "ui/ux design": "UIUX_vid.html"
+  "web development": "/pages/webdev-video.html",
+  "python programming": "/pages/python-video.html",
+  "data science": "/pages/ds-video.html",
+  "ui / ux design": "/pages/uiux-video.html",
+  "ui/ux design": "/pages/uiux-video.html"
+};
+
+const LEGACY_PAGE_PATH_MAP = {
+  "sample_vid.html": "/pages/webdev-video.html",
+  "/sample_vid.html": "/pages/webdev-video.html",
+  "/pages/sample_vid.html": "/pages/webdev-video.html",
+  "python_vid.html": "/pages/python-video.html",
+  "/python_vid.html": "/pages/python-video.html",
+  "/pages/python_vid.html": "/pages/python-video.html",
+  "ds_vid.html": "/pages/ds-video.html",
+  "/ds_vid.html": "/pages/ds-video.html",
+  "/pages/ds_vid.html": "/pages/ds-video.html",
+  "uiux_vid.html": "/pages/uiux-video.html",
+  "/uiux_vid.html": "/pages/uiux-video.html",
+  "/pages/uiux_vid.html": "/pages/uiux-video.html",
+  "courses.html": "/pages/courses.html",
+  "/courses.html": "/pages/courses.html",
+  "/pages/courses.html": "/pages/courses.html",
+  "home_page.html": "/pages/home.html",
+  "/home_page.html": "/pages/home.html",
+  "/pages/home_page.html": "/pages/home.html",
+  "sign_up.html": "/pages/signup.html",
+  "/sign_up.html": "/pages/signup.html",
+  "/pages/sign_up.html": "/pages/signup.html",
+  "temp_ds.html": "/pages/temp-ds.html",
+  "/temp_ds.html": "/pages/temp-ds.html",
+  "/pages/temp_ds.html": "/pages/temp-ds.html"
 };
 
 const normalizeCourseName = (name) =>
@@ -29,8 +57,17 @@ const normalizeCourseName = (name) =>
     .toLowerCase()
     .replace(/\s+/g, " ");
 
-const resolveCourseVideoPath = (courseName) =>
-  COURSE_VIDEO_MAP[normalizeCourseName(courseName)] || "Courses.html";
+const normalizeLegacyPagePath = (inputPath) => {
+  const raw = String(inputPath || "").trim();
+  if (!raw) return "";
+  const canonical = raw.toLowerCase();
+  return LEGACY_PAGE_PATH_MAP[canonical] || raw;
+};
+
+const resolveCourseVideoPath = (courseName, uploadedVideoPath) =>
+  normalizeLegacyPagePath(uploadedVideoPath) ||
+  COURSE_VIDEO_MAP[normalizeCourseName(courseName)] ||
+  "/pages/courses.html";
 
 db.query(
   `CREATE TABLE IF NOT EXISTS ${DEPT_TABLE} (
@@ -183,6 +220,34 @@ ensureColumn("role", "VARCHAR(20) NOT NULL DEFAULT 'student'");
 ensureColumn("dept_id", "INT NULL");
 ensureColumn("phone_no", "VARCHAR(15) NULL");
 
+const ensureCourseColumn = (columnName, definition) => {
+  db.query(
+    `SHOW COLUMNS FROM ${COURSE_TABLE} LIKE ?`,
+    [columnName],
+    (showErr, results) => {
+      if (showErr) {
+        console.error(`Failed to check course column ${columnName}:`, showErr.message);
+        return;
+      }
+
+      if (results && results.length > 0) return;
+
+      db.query(
+        `ALTER TABLE ${COURSE_TABLE} ADD COLUMN ${columnName} ${definition}`,
+        (alterErr) => {
+          if (alterErr) {
+            console.error(`Failed to add course column ${columnName}:`, alterErr.message);
+            return;
+          }
+          courseColumnCache = null;
+        }
+      );
+    }
+  );
+};
+
+ensureCourseColumn("video_path", "VARCHAR(255) NULL");
+
 const getDeptColumns = (callback) => {
   if (deptColumnCache) {
     return callback(null, deptColumnCache);
@@ -325,6 +390,11 @@ const getCourseColumns = (callback) => {
     const creditsCol = fields.has("credits") ? "credits" : null;
     const deptCol = fields.has("dept_id") ? "dept_id" : null;
     const teacherCol = fields.has("teacher_id") ? "teacher_id" : null;
+    const videoCol = fields.has("video_path")
+      ? "video_path"
+      : fields.has("video_url")
+        ? "video_url"
+        : null;
     const idColumnMeta = (rows || []).find((row) => row.Field === idCol);
     const idAutoIncrement = !!(
       idColumnMeta &&
@@ -341,6 +411,7 @@ const getCourseColumns = (callback) => {
       creditsCol,
       deptCol,
       teacherCol,
+      videoCol,
       idAutoIncrement
     };
     return callback(null, courseColumnCache);
@@ -440,16 +511,143 @@ const insertTeacherAccount = ({ username, email, hashedPassword, phoneNo, deptId
   });
 };
 
+const EMAIL_OTP_TTL_MS = 10 * 60 * 1000;
+const EMAIL_OTP_MAX_ATTEMPTS = 5;
+const emailOtpStore = new Map();
+
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+
+const createOtpCode = () => String(Math.floor(10000 + Math.random() * 90000));
+
+const hasSmtpConfig = () =>
+  !!(
+    process.env.EMAIL_SMTP_HOST &&
+    process.env.EMAIL_SMTP_PORT &&
+    process.env.EMAIL_SMTP_USER &&
+    process.env.EMAIL_SMTP_PASS &&
+    process.env.EMAIL_FROM
+  );
+
+const smtpTransport = hasSmtpConfig()
+  ? nodemailer.createTransport({
+      host: process.env.EMAIL_SMTP_HOST,
+      port: Number(process.env.EMAIL_SMTP_PORT),
+      secure: Number(process.env.EMAIL_SMTP_PORT) === 465,
+      auth: {
+        user: process.env.EMAIL_SMTP_USER,
+        pass: process.env.EMAIL_SMTP_PASS
+      }
+    })
+  : null;
+
+const clearSignupVerificationSession = (req) => {
+  if (!req || !req.session) return;
+  delete req.session.verifiedSignupEmail;
+  delete req.session.verifiedSignupAt;
+};
+
+router.post("/api/email-otp/send", async (req, res) => {
+  const email = normalizeEmail(req.body && req.body.email);
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: "Invalid email format" });
+  }
+
+  if (!smtpTransport) {
+    return res.status(500).json({ error: "SMTP is not configured on server" });
+  }
+
+  const otp = createOtpCode();
+  emailOtpStore.set(email, {
+    otp,
+    expiresAt: Date.now() + EMAIL_OTP_TTL_MS,
+    attempts: 0
+  });
+
+  try {
+    await smtpTransport.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: "Your Learnix verification code",
+      text: `Your Learnix verification code is ${otp}. It expires in 10 minutes.`
+    });
+    return res.json({ message: "OTP sent to your email" });
+  } catch (mailErr) {
+    console.error(mailErr);
+    emailOtpStore.delete(email);
+    return res.status(500).json({ error: "Failed to send OTP email" });
+  }
+});
+
+router.post("/api/email-otp/verify", (req, res) => {
+  const email = normalizeEmail(req.body && req.body.email);
+  const otp = String((req.body && req.body.otp) || "").trim();
+
+  if (!email || !otp) {
+    return res.status(400).json({ error: "Email and OTP are required" });
+  }
+
+  const otpData = emailOtpStore.get(email);
+  if (!otpData) {
+    return res.status(400).json({ error: "No active OTP for this email" });
+  }
+
+  if (Date.now() > otpData.expiresAt) {
+    emailOtpStore.delete(email);
+    return res.status(400).json({ error: "OTP expired. Request a new one." });
+  }
+
+  if (otpData.attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+    emailOtpStore.delete(email);
+    return res.status(400).json({ error: "Too many invalid attempts. Request a new OTP." });
+  }
+
+  if (otpData.otp !== otp) {
+    otpData.attempts += 1;
+    emailOtpStore.set(email, otpData);
+    return res.status(400).json({ error: "Invalid OTP" });
+  }
+
+  emailOtpStore.delete(email);
+  req.session.verifiedSignupEmail = email;
+  req.session.verifiedSignupAt = Date.now();
+  return res.json({ message: "Email verified successfully" });
+});
+
 /*signup*/
 
 
 router.post("/signup", async (req, res) => {
-  const { username, email, phone_no: phoneNo, password, confirmPassword, role, department, dept_id: deptId } = req.body;
+  const {
+    username,
+    email,
+    phone_no: phoneNo,
+    password,
+    confirmPassword,
+    role,
+    department,
+    dept_id: deptId
+  } = req.body;
+  const normalizedEmail = email ? String(email).trim().toLowerCase() : "";
   const normalizedRole = role ? String(role).trim().toLowerCase() : "";
   const normalizedPhoneNo = phoneNo ? String(phoneNo).trim() : "";
 
-  if (!username || !email || !normalizedPhoneNo || !password || !confirmPassword || !normalizedRole) {
+  if (
+    !username ||
+    !normalizedEmail ||
+    !normalizedPhoneNo ||
+    !password ||
+    !confirmPassword ||
+    !normalizedRole
+  ) {
     return res.status(400).send("All fields are required");
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return res.status(400).send("Invalid email format");
   }
 
   if (!/^\d{10}$/.test(normalizedPhoneNo)) {
@@ -464,6 +662,17 @@ router.post("/signup", async (req, res) => {
     return res.status(400).send("Passwords do not match");
   }
 
+  const sessionVerifiedEmail = normalizeEmail(req.session && req.session.verifiedSignupEmail);
+  const sessionVerifiedAt = req.session && req.session.verifiedSignupAt ? Number(req.session.verifiedSignupAt) : 0;
+  if (
+    !sessionVerifiedEmail ||
+    sessionVerifiedEmail !== normalizedEmail ||
+    !sessionVerifiedAt ||
+    Date.now() - sessionVerifiedAt > EMAIL_OTP_TTL_MS
+  ) {
+    return res.status(400).send("Please verify your email with 5-digit OTP before signup");
+  }
+
   const hashedPassword = await bcrypt.hash(password, 10);
 
   resolveDepartmentId(
@@ -475,7 +684,7 @@ router.post("/signup", async (req, res) => {
 
       if (normalizedRole === "teacher") {
         insertTeacherAccount(
-          { username, email, hashedPassword, phoneNo: normalizedPhoneNo, deptId: resolvedDeptId },
+          { username, email: normalizedEmail, hashedPassword, phoneNo: normalizedPhoneNo, deptId: resolvedDeptId },
           (teacherErr) => {
             if (teacherErr) {
               console.error(teacherErr);
@@ -484,7 +693,8 @@ router.post("/signup", async (req, res) => {
               }
               return res.status(500).send(`Error during teacher registration: ${teacherErr.sqlMessage}`);
             }
-            return res.redirect("/login.html");
+            clearSignupVerificationSession(req);
+            return res.redirect("/pages/login.html");
           }
         );
         return;
@@ -492,7 +702,7 @@ router.post("/signup", async (req, res) => {
 
       db.query(
         `INSERT INTO ${AUTH_TABLE} (username, email, phone_no, role, dept_id, password) VALUES (?, ?, ?, ?, ?, ?)`,
-        [username, email, normalizedPhoneNo, normalizedRole, resolvedDeptId, hashedPassword],
+        [username, normalizedEmail, normalizedPhoneNo, normalizedRole, resolvedDeptId, hashedPassword],
         (err) => {
           if (err) {
             console.error(err);
@@ -501,7 +711,8 @@ router.post("/signup", async (req, res) => {
             }
             return res.status(500).send(`Error during registration: ${err.sqlMessage}`);
           }
-          return res.redirect("/login.html");
+          clearSignupVerificationSession(req);
+          return res.redirect("/pages/login.html");
         }
       );
     }
@@ -557,7 +768,7 @@ router.post("/login", (req, res) => {
                 dept_id: results[0].dept_id,
                 department: resolvedDeptName || ""
               };
-              return res.redirect("/home_page.html");
+              return res.redirect("/pages/home.html");
             }
           );
           return;
@@ -593,7 +804,7 @@ router.post("/login", (req, res) => {
               dept_id: results[0].dept_id,
               department: resolvedDeptName || ""
             };
-            res.redirect("/home_page.html");
+            res.redirect("/pages/home.html");
           }
         );
       }
@@ -602,13 +813,13 @@ router.post("/login", (req, res) => {
 
 /*DAshboard*/
 router.get("/dashboard", (req, res) => {
-    if (!req.session.userId) return res.redirect("/login.html");
-    res.sendFile(path.join(__dirname, "..", "..", "public", "dashboard.html"));
+    if (!req.session.userId) return res.redirect("/pages/login.html");
+    res.sendFile(path.join(__dirname, "..", "..", "public", "pages", "dashboard.html"));
 });
 
 router.get("/profile", (req, res) => {
-    if (!req.session.userId) return res.redirect("/login.html");
-    res.sendFile(path.join(__dirname, "..", "..", "public", "profile.html"));
+    if (!req.session.userId) return res.redirect("/pages/login.html");
+    res.sendFile(path.join(__dirname, "..", "..", "public", "pages", "profile.html"));
 });
 
 router.get("/api/me", (req, res) => {
@@ -709,13 +920,14 @@ router.get("/api/my-courses", (req, res) => {
           return res.status(500).json({ error: "Failed to load department schema" });
         }
 
-        const { idCol, nameCol, creditsCol, deptCol, teacherCol } = courseMeta;
+        const { idCol, nameCol, creditsCol, deptCol, teacherCol, videoCol } = courseMeta;
         const creditsSelect = creditsCol ? `c.${creditsCol} AS credits` : "NULL AS credits";
         const enrollmentDateSelect = enrollMeta.dateCol
           ? `e.${enrollMeta.dateCol} AS enrollment_date`
           : "NULL AS enrollment_date";
         const deptSelect = deptCol ? `d.${deptMeta.nameCol} AS dept_name` : "NULL AS dept_name";
         const teacherSelect = teacherCol ? "t.name AS teacher_name" : "NULL AS teacher_name";
+        const videoSelect = videoCol ? `c.${videoCol} AS video_path` : "NULL AS video_path";
         const deptJoin = deptCol
           ? `LEFT JOIN ${DEPT_TABLE} d ON d.${deptMeta.idCol} = c.${deptCol}`
           : `LEFT JOIN ${DEPT_TABLE} d ON 1 = 0`;
@@ -729,7 +941,7 @@ router.get("/api/my-courses", (req, res) => {
             : `c.${nameCol} ASC`;
 
         db.query(
-          `SELECT c.${idCol} AS course_id, c.${nameCol} AS course_name, ${creditsSelect}, ${deptSelect}, ${teacherSelect}, ${enrollmentDateSelect}
+          `SELECT c.${idCol} AS course_id, c.${nameCol} AS course_name, ${creditsSelect}, ${deptSelect}, ${teacherSelect}, ${enrollmentDateSelect}, ${videoSelect}
            FROM ${ENROLL_TABLE} e
            JOIN ${COURSE_TABLE} c ON c.${idCol} = e.${enrollMeta.courseCol}
            ${deptJoin}
@@ -745,13 +957,61 @@ router.get("/api/my-courses", (req, res) => {
 
             const courses = (rows || []).map((course) => ({
               ...course,
-              video_path: resolveCourseVideoPath(course.course_name)
+              video_path: resolveCourseVideoPath(course.course_name, course.video_path)
             }));
 
             return res.json({ courses });
           }
         );
       });
+    });
+  });
+});
+
+router.get("/api/courses", (_req, res) => {
+  getCourseColumns((courseMetaErr, courseMeta) => {
+    if (courseMetaErr) {
+      console.error(courseMetaErr);
+      return res.status(500).json({ error: "Failed to load courses schema" });
+    }
+
+    getDeptColumns((deptMetaErr, deptMeta) => {
+      if (deptMetaErr) {
+        console.error(deptMetaErr);
+        return res.status(500).json({ error: "Failed to load department schema" });
+      }
+
+      const { idCol, nameCol, creditsCol, deptCol, teacherCol, videoCol } = courseMeta;
+      const creditsSelect = creditsCol ? `c.${creditsCol} AS credits` : "NULL AS credits";
+      const deptSelect = deptCol ? `d.${deptMeta.nameCol} AS dept_name` : "NULL AS dept_name";
+      const teacherSelect = teacherCol ? "t.name AS teacher_name" : "NULL AS teacher_name";
+      const videoSelect = videoCol ? `c.${videoCol} AS video_path` : "NULL AS video_path";
+      const deptJoin = deptCol
+        ? `LEFT JOIN ${DEPT_TABLE} d ON d.${deptMeta.idCol} = c.${deptCol}`
+        : `LEFT JOIN ${DEPT_TABLE} d ON 1 = 0`;
+      const teacherJoin = teacherCol
+        ? `LEFT JOIN ${TEACHER_TABLE} t ON t.teacher_id = c.${teacherCol}`
+        : `LEFT JOIN ${TEACHER_TABLE} t ON 1 = 0`;
+
+      db.query(
+        `SELECT c.${idCol} AS course_id, c.${nameCol} AS course_name, ${creditsSelect}, ${deptSelect}, ${teacherSelect}, ${videoSelect}
+         FROM ${COURSE_TABLE} c
+         ${deptJoin}
+         ${teacherJoin}
+         ORDER BY c.${nameCol} ASC`,
+        (err, rows) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Failed to fetch courses" });
+          }
+
+          const courses = (rows || []).map((course) => ({
+            ...course,
+            video_path: resolveCourseVideoPath(course.course_name, course.video_path)
+          }));
+          return res.json({ courses });
+        }
+      );
     });
   });
 });
@@ -791,11 +1051,12 @@ router.post("/api/enroll", (req, res) => {
           return res.status(500).json({ error: "Failed to load department schema" });
         }
 
-        const { idCol, nameCol, creditsCol, deptCol, teacherCol, idAutoIncrement } = courseMeta;
+        const { idCol, nameCol, creditsCol, deptCol, teacherCol, videoCol, idAutoIncrement } = courseMeta;
         const creditsSelect = creditsCol ? `c.${creditsCol} AS credits` : "NULL AS credits";
         const enrollmentDateSelect = enrollMeta.dateCol
           ? `e.${enrollMeta.dateCol} AS enrollment_date`
           : "NULL AS enrollment_date";
+        const videoSelect = videoCol ? `c.${videoCol} AS video_path` : "NULL AS video_path";
         const deptJoin = deptCol
           ? `LEFT JOIN ${DEPT_TABLE} d ON d.${deptMeta.idCol} = c.${deptCol}`
           : `LEFT JOIN ${DEPT_TABLE} d ON 1 = 0`;
@@ -808,7 +1069,7 @@ router.post("/api/enroll", (req, res) => {
             ? ` ORDER BY e.${enrollMeta.dateCol} DESC`
             : "";
           db.query(
-            `SELECT c.${nameCol} AS course_name, ${creditsSelect}, d.${deptMeta.nameCol} AS dept_name, t.name AS teacher_name, ${enrollmentDateSelect}
+            `SELECT c.${nameCol} AS course_name, ${creditsSelect}, d.${deptMeta.nameCol} AS dept_name, t.name AS teacher_name, ${enrollmentDateSelect}, ${videoSelect}
              FROM ${ENROLL_TABLE} e
              JOIN ${COURSE_TABLE} c ON c.${idCol} = e.${enrollMeta.courseCol}
              ${deptJoin}
@@ -845,7 +1106,7 @@ router.post("/api/enroll", (req, res) => {
                     enrollment: detailRows[0]
                       ? {
                           ...detailRows[0],
-                          video_path: resolveCourseVideoPath(detailRows[0].course_name)
+                          video_path: resolveCourseVideoPath(detailRows[0].course_name, detailRows[0].video_path)
                         }
                       : null
                   });
@@ -893,7 +1154,7 @@ router.post("/api/enroll", (req, res) => {
                       enrollment: detailRows[0]
                         ? {
                             ...detailRows[0],
-                            video_path: resolveCourseVideoPath(detailRows[0].course_name)
+                            video_path: resolveCourseVideoPath(detailRows[0].course_name, detailRows[0].video_path)
                           }
                         : null
                     });
@@ -1139,7 +1400,9 @@ router.post("/api/enroll-request", (req, res) => {
 
 router.get("/logout", (req, res) => {
     req.session.destroy();
-    res.redirect("/login.html");
+    res.redirect("/pages/login.html");
 });
 
 module.exports = router;
+
+

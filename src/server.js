@@ -1,10 +1,41 @@
-﻿const express = require("express");
+require("dotenv").config();
+const express = require("express");
 const session = require("express-session");
 const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
 const authRoutes = require("./routes/auth");
+const db = require("./config/database");
 
 const app = express();
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
+const UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+const uploadStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (_req, file, cb) => {
+    const safeName = String(file.originalname || "video")
+      .replace(/[^\w.\-]/g, "_")
+      .toLowerCase();
+    cb(null, `${Date.now()}-${safeName}`);
+  }
+});
+
+const uploadVideo = multer({
+  storage: uploadStorage,
+  limits: { fileSize: 200 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (String(file.mimetype || "").startsWith("video/")) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error("Only video files are allowed"));
+  }
+});
 
 
 app.use(express.json());
@@ -19,7 +50,7 @@ app.use(authRoutes);
 
 // Root -> login
 app.get("/", (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, "login.html"));
+  res.sendFile(path.join(PUBLIC_DIR, "pages", "login.html"));
 });
 
 // Force dashboard file URL through protected dashboard route.
@@ -31,7 +62,103 @@ app.get("/profile.html", (req, res) => {
   res.redirect("/profile");
 });
 
+// Legacy page URLs -> new structured locations.
+app.get("/login.html", (_req, res) => res.redirect("/pages/login.html"));
+app.get("/home_page.html", (_req, res) => res.redirect("/pages/home.html"));
+app.get("/sign_up.html", (_req, res) => res.redirect("/pages/signup.html"));
+app.get("/demo.html", (_req, res) => res.redirect("/pages/demo.html"));
+app.get("/Courses.html", (_req, res) => res.redirect("/pages/courses.html"));
+app.get("/Sample_vid.html", (_req, res) => res.redirect("/pages/webdev-video.html"));
+app.get("/Python_vid.html", (_req, res) => res.redirect("/pages/python-video.html"));
+app.get("/DS_vid.html", (_req, res) => res.redirect("/pages/ds-video.html"));
+app.get("/UIUX_vid.html", (_req, res) => res.redirect("/pages/uiux-video.html"));
+app.get("/temp_ds.html", (_req, res) => res.redirect("/pages/temp-ds.html"));
+
 app.use(express.static(PUBLIC_DIR));
+
+app.post("/api/teacher/upload-video", (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Please log in first" });
+  }
+
+  if (!req.session.user || req.session.user.role !== "teacher") {
+    return res.status(403).json({ error: "Only teachers can upload videos" });
+  }
+
+  uploadVideo.single("courseVideo")(req, res, (uploadErr) => {
+    if (uploadErr) {
+      return res.status(400).json({ error: uploadErr.message || "Upload failed" });
+    }
+
+    const courseName = req.body && req.body.courseName ? String(req.body.courseName).trim() : "";
+    if (!courseName) {
+      return res.status(400).json({ error: "courseName is required" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "courseVideo file is required" });
+    }
+
+    const filePath = `/uploads/${req.file.filename}`;
+    const teacherId = req.session.user && req.session.user.id ? Number(req.session.user.id) : null;
+    const teacherDeptId =
+      req.session.user && req.session.user.dept_id ? Number(req.session.user.dept_id) : null;
+
+    db.query(
+      `SELECT course_id FROM courses WHERE course_name = ? LIMIT 1`,
+      [courseName],
+      (findErr, rows) => {
+        if (findErr) {
+          console.error(findErr);
+          return res.status(500).json({ error: "Failed to check existing course" });
+        }
+
+        if (rows && rows.length > 0) {
+          const courseId = rows[0].course_id;
+          db.query(
+            `UPDATE courses
+             SET video_path = ?, teacher_id = COALESCE(?, teacher_id), dept_id = COALESCE(?, dept_id)
+             WHERE course_id = ?`,
+            [filePath, teacherId, teacherDeptId, courseId],
+            (updateErr) => {
+              if (updateErr) {
+                console.error(updateErr);
+                return res.status(500).json({ error: "Video uploaded but course update failed" });
+              }
+
+              return res.json({
+                message: "Video uploaded successfully",
+                filePath,
+                courseName,
+                courseId
+              });
+            }
+          );
+          return;
+        }
+
+        db.query(
+          `INSERT INTO courses (course_name, credits, dept_id, teacher_id, video_path)
+           VALUES (?, ?, ?, ?, ?)`,
+          [courseName, 3, teacherDeptId, teacherId, filePath],
+          (insertErr, insertResult) => {
+            if (insertErr) {
+              console.error(insertErr);
+              return res.status(500).json({ error: "Video uploaded but course creation failed" });
+            }
+
+            return res.json({
+              message: "Video uploaded successfully",
+              filePath,
+              courseName,
+              courseId: insertResult.insertId
+            });
+          }
+        );
+      }
+    );
+  });
+});
 
 // Simple AI generation endpoint. If OPENAI_API_KEY is set, this will call OpenAI's chat API.
 app.post('/api/generate', async (req, res) => {
@@ -105,3 +232,4 @@ app.post('/api/generate', async (req, res) => {
 app.listen(3000, () => {
   console.log(`Server running at http://localhost:3000`);
 });
+
