@@ -1,8 +1,11 @@
-# 🚀 Mini Project – User Authentication System
+# 🚀 Mini Project –📚 Learnix
 
 ## 📌 Project Overview
-This project is a full-stack authentication system built using Node.js, Express, and MySQL.  
-It allows users to sign up, log in securely, and manage sessions with proper password encryption and email verification.
+
+
+Learnix is a web-based learning platform designed to help users access educational content, manage learning resources, and improve knowledge through an easy-to-use interface.
+
+The platform focuses on providing a smooth user experience with secure authentication and a structured learning environment.
 
 The goal of this project is to implement secure authentication with best practices in backend development.
 
