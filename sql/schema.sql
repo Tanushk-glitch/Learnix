@@ -53,3 +53,33 @@ create table enrollment(
     foreign key (course_id) references courses(course_id)
 );
 
+create table student_performance(
+    performance_id int auto_increment primary key,
+    auth_user_id int not null,
+    course_id int not null,
+    attendance_pct decimal(5,2),
+    marks_obtained int,
+    marks_total int,
+    focus_area varchar(255),
+    updated_at timestamp default current_timestamp on update current_timestamp,
+    foreign key (auth_user_id) references auth_users(id),
+    foreign key (course_id) references courses(course_id)
+);
+
+insert into student_performance (auth_user_id, course_id, attendance_pct, marks_obtained, marks_total, focus_area)
+select
+    e.auth_user_id,
+    e.course_id,
+    82.50,
+    76,
+    100,
+    concat('Focus on practice in ', c.course_name)
+from enrollment e
+join courses c on c.course_id = e.course_id
+where not exists (
+    select 1
+    from student_performance p
+    where p.auth_user_id = e.auth_user_id
+      and p.course_id = e.course_id
+);
+

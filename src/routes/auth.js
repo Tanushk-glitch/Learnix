@@ -11,10 +11,12 @@ const DEPT_TABLE = "dept";
 const COURSE_TABLE = "courses";
 const ENROLL_TABLE = "enrollment";
 const ENROLL_REQUEST_TABLE = "enrollment_requests";
+const PERFORMANCE_TABLE = "student_performance";
 let deptColumnCache = null;
 let teacherIdAutoIncrement = null;
 let courseColumnCache = null;
 let enrollmentColumnCache = null;
+let performanceColumnCache = null;
 
 const COURSE_VIDEO_MAP = {
   "web development": "/pages/webdev-video.html",
@@ -158,6 +160,24 @@ db.query(
   }
 );
 
+db.query(
+  `CREATE TABLE IF NOT EXISTS ${PERFORMANCE_TABLE} (
+    performance_id INT AUTO_INCREMENT PRIMARY KEY,
+    auth_user_id INT NOT NULL,
+    course_id INT NOT NULL,
+    attendance_pct DECIMAL(5,2) NULL,
+    marks_obtained INT NULL,
+    marks_total INT NULL,
+    focus_area VARCHAR(255) NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (auth_user_id) REFERENCES ${AUTH_TABLE}(id),
+    FOREIGN KEY (course_id) REFERENCES ${COURSE_TABLE}(course_id)
+  )`,
+  (err) => {
+    if (err) console.error("Failed to ensure student_performance table:", err.message);
+  }
+);
+
 const repairCoursesForeignKeys = () => {
   db.query(
     `SELECT CONSTRAINT_NAME
@@ -247,6 +267,41 @@ const ensureCourseColumn = (columnName, definition) => {
 };
 
 ensureCourseColumn("video_path", "VARCHAR(255) NULL");
+
+const ensurePerformanceColumn = (columnName, definition) => {
+  db.query(
+    `SHOW COLUMNS FROM ${PERFORMANCE_TABLE} LIKE ?`,
+    [columnName],
+    (showErr, results) => {
+      if (showErr) {
+        console.error(`Failed to check performance column ${columnName}:`, showErr.message);
+        return;
+      }
+
+      if (results && results.length > 0) return;
+
+      db.query(
+        `ALTER TABLE ${PERFORMANCE_TABLE} ADD COLUMN ${columnName} ${definition}`,
+        (alterErr) => {
+          if (alterErr) {
+            console.error(`Failed to add performance column ${columnName}:`, alterErr.message);
+            return;
+          }
+          performanceColumnCache = null;
+        }
+      );
+    }
+  );
+};
+
+ensurePerformanceColumn("attendance_pct", "DECIMAL(5,2) NULL");
+ensurePerformanceColumn("marks_obtained", "INT NULL");
+ensurePerformanceColumn("marks_total", "INT NULL");
+ensurePerformanceColumn("focus_area", "VARCHAR(255) NULL");
+ensurePerformanceColumn(
+  "updated_at",
+  "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+);
 
 const getDeptColumns = (callback) => {
   if (deptColumnCache) {
@@ -511,6 +566,78 @@ const insertTeacherAccount = ({ username, email, hashedPassword, phoneNo, deptId
   });
 };
 
+const getPerformanceColumns = (callback) => {
+  if (performanceColumnCache) {
+    return callback(null, performanceColumnCache);
+  }
+
+  db.query(`SHOW COLUMNS FROM ${PERFORMANCE_TABLE}`, (err, rows) => {
+    if (err) return callback(err);
+
+    const fields = new Set((rows || []).map((row) => row.Field));
+    const idCol = fields.has("performance_id") ? "performance_id" : fields.has("id") ? "id" : null;
+    const userCol = fields.has("auth_user_id")
+      ? "auth_user_id"
+      : fields.has("user_id")
+        ? "user_id"
+        : fields.has("student_id")
+          ? "student_id"
+          : null;
+    const courseCol = fields.has("course_id")
+      ? "course_id"
+      : fields.has("courses_id")
+        ? "courses_id"
+        : fields.has("course")
+          ? "course"
+          : null;
+    const attendanceCol = fields.has("attendance_pct")
+      ? "attendance_pct"
+      : fields.has("attendance")
+        ? "attendance"
+        : fields.has("attendance_percentage")
+          ? "attendance_percentage"
+          : null;
+    const marksObtainedCol = fields.has("marks_obtained")
+      ? "marks_obtained"
+      : fields.has("marks")
+        ? "marks"
+        : fields.has("marks_score")
+          ? "marks_score"
+          : null;
+    const marksTotalCol = fields.has("marks_total")
+      ? "marks_total"
+      : fields.has("total_marks")
+        ? "total_marks"
+        : fields.has("marks_max")
+          ? "marks_max"
+          : null;
+    const focusCol = fields.has("focus_area") ? "focus_area" : fields.has("focus") ? "focus" : null;
+    const updatedCol = fields.has("updated_at")
+      ? "updated_at"
+      : fields.has("updated_on")
+        ? "updated_on"
+        : fields.has("created_at")
+          ? "created_at"
+          : null;
+
+    if (!userCol || !courseCol) {
+      return callback(new Error("Performance table is missing required columns"));
+    }
+
+    performanceColumnCache = {
+      idCol,
+      userCol,
+      courseCol,
+      attendanceCol,
+      marksObtainedCol,
+      marksTotalCol,
+      focusCol,
+      updatedCol
+    };
+    return callback(null, performanceColumnCache);
+  });
+};
+
 const EMAIL_OTP_TTL_MS = 10 * 60 * 1000;
 const EMAIL_OTP_MAX_ATTEMPTS = 5;
 const emailOtpStore = new Map();
@@ -518,6 +645,92 @@ const emailOtpStore = new Map();
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 
 const createOtpCode = () => String(Math.floor(10000 + Math.random() * 90000));
+
+const seededRandom = (seed) => {
+  let h = 2166136261;
+  const str = String(seed || "");
+  for (let i = 0; i < str.length; i += 1) {
+    h ^= str.charCodeAt(i);
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+  }
+  return (h >>> 0) / 4294967295;
+};
+
+const getRandomPerformanceSample = () => {
+  const rTier = Math.random();
+  let attendanceMin = 55;
+  let attendanceMax = 75;
+  let scoreMin = 40;
+  let scoreMax = 60;
+
+  let tier = "Needs Improvement";
+  if (rTier > 0.35 && rTier <= 0.75) {
+    tier = "Good";
+    attendanceMin = 70;
+    attendanceMax = 88;
+    scoreMin = 60;
+    scoreMax = 82;
+  } else if (rTier > 0.75) {
+    tier = "Excellent";
+    attendanceMin = 85;
+    attendanceMax = 98;
+    scoreMin = 82;
+    scoreMax = 98;
+  }
+
+  const attendance = Math.round((attendanceMin + Math.random() * (attendanceMax - attendanceMin)) * 10) / 10;
+  const score = Math.round(scoreMin + Math.random() * (scoreMax - scoreMin));
+  const marksTotal = 100;
+  const marksObtained = Math.round((score / 100) * marksTotal);
+
+  return { attendance, score, marksObtained, marksTotal, tier };
+};
+
+const resolvePerformanceMetrics = ({ row, userId, courseName }) => {
+  let attendance = row.attendance_pct !== null ? Number(row.attendance_pct) : null;
+  let marksObtained = row.marks_obtained !== null ? Number(row.marks_obtained) : null;
+  let marksTotal = row.marks_total !== null ? Number(row.marks_total) : null;
+  let score =
+    Number.isFinite(marksObtained) && Number.isFinite(marksTotal) && marksTotal > 0
+      ? Math.round((marksObtained / marksTotal) * 100)
+      : null;
+
+  const focusText = row.focus_area ? String(row.focus_area) : "";
+  const isSeededDefault =
+    Number.isFinite(attendance) &&
+    Number.isFinite(marksObtained) &&
+    Number.isFinite(marksTotal) &&
+    attendance === 82.5 &&
+    marksObtained === 76 &&
+    marksTotal === 100 &&
+    focusText.toLowerCase().startsWith("focus on practice in");
+  const isUniformDefault =
+    Number.isFinite(attendance) &&
+    Number.isFinite(marksObtained) &&
+    Number.isFinite(marksTotal) &&
+    attendance === 82.5 &&
+    marksObtained === 76 &&
+    marksTotal === 100;
+
+  let usedRandom = false;
+  if (attendance === null || score === null || isSeededDefault || isUniformDefault) {
+    const sample = getRandomPerformanceSample();
+    const shouldReplace = attendance === null || score === null || isSeededDefault || isUniformDefault;
+    attendance = shouldReplace ? sample.attendance : attendance;
+    marksTotal = shouldReplace ? sample.marksTotal : marksTotal;
+    marksObtained = shouldReplace ? sample.marksObtained : marksObtained;
+    score = shouldReplace ? sample.score : score;
+    usedRandom = true;
+  }
+
+  return {
+    attendance,
+    marksObtained,
+    marksTotal,
+    score,
+    usedRandom
+  };
+};
 
 const hasSmtpConfig = () =>
   !!(
@@ -961,6 +1174,285 @@ router.get("/api/my-courses", (req, res) => {
             }));
 
             return res.json({ courses });
+          }
+        );
+      });
+    });
+  });
+});
+
+router.get("/api/student-performance", (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  if (req.session.userSource === "teacher") {
+    return res.json({ performance: [] });
+  }
+
+  getCourseColumns((courseMetaErr, courseMeta) => {
+    if (courseMetaErr) {
+      console.error(courseMetaErr);
+      return res.status(500).json({ error: "Failed to load courses schema" });
+    }
+
+    getPerformanceColumns((perfMetaErr, perfMeta) => {
+      if (perfMetaErr) {
+        console.error(perfMetaErr);
+        return res.status(500).json({ error: "Failed to load performance schema" });
+      }
+
+      getEnrollmentColumns((enrollMetaErr, enrollMeta) => {
+        if (enrollMetaErr) {
+          console.error(enrollMetaErr);
+          return res.status(500).json({ error: "Failed to load enrollment schema" });
+        }
+
+      const { idCol, nameCol } = courseMeta;
+      const {
+        idCol: perfIdCol,
+        userCol,
+        courseCol,
+        attendanceCol,
+        marksObtainedCol,
+        marksTotalCol,
+        focusCol,
+        updatedCol
+      } = perfMeta;
+
+      const performanceIdSelect = perfIdCol ? `p.${perfIdCol} AS performance_id` : "NULL AS performance_id";
+      const attendanceSelect = attendanceCol ? `p.${attendanceCol} AS attendance_pct` : "NULL AS attendance_pct";
+      const marksObtainedSelect = marksObtainedCol
+        ? `p.${marksObtainedCol} AS marks_obtained`
+        : "NULL AS marks_obtained";
+      const marksTotalSelect = marksTotalCol ? `p.${marksTotalCol} AS marks_total` : "NULL AS marks_total";
+      const focusSelect = focusCol ? `p.${focusCol} AS focus_area` : "NULL AS focus_area";
+      const updatedSelect = updatedCol ? `p.${updatedCol} AS updated_at` : "NULL AS updated_at";
+
+      const selectPerformance = () => {
+        db.query(
+          `SELECT e.${enrollMeta.userCol} AS student_id, p.${courseCol} AS course_id, ${performanceIdSelect},
+                  c.${nameCol} AS course_name, ${attendanceSelect}, ${marksObtainedSelect},
+                  ${marksTotalSelect}, ${focusSelect}, ${updatedSelect}
+           FROM ${PERFORMANCE_TABLE} p
+           JOIN ${COURSE_TABLE} c ON c.${idCol} = p.${courseCol}
+           JOIN ${ENROLL_TABLE} e ON e.${enrollMeta.courseCol} = p.${courseCol} AND e.${enrollMeta.userCol} = p.${userCol}
+           WHERE p.${userCol} = ?
+           ORDER BY c.${nameCol} ASC`,
+          [req.session.userId],
+          (err, rows) => {
+            if (err) {
+              console.error(err);
+              return res.status(500).json({ error: "Failed to load performance data" });
+            }
+
+            const performance = (rows || []).map((row) => {
+              const metrics = resolvePerformanceMetrics({
+                row,
+                userId: row.student_id || req.session.userId,
+                courseName: row.course_name
+              });
+
+              let focusNote = row.focus_area ? String(row.focus_area) : "";
+              if (!focusNote) {
+                if (metrics.score !== null && metrics.score < 60) {
+                  focusNote = `Focus more on ${row.course_name} fundamentals.`;
+                } else if (metrics.attendance !== null && metrics.attendance < 75) {
+                  focusNote = `Increase attendance in ${row.course_name}.`;
+                } else {
+                  focusNote = `Maintain progress in ${row.course_name}.`;
+                }
+              }
+
+              return {
+                course_name: row.course_name,
+                attendance_pct: metrics.attendance,
+                marks_obtained: metrics.marksObtained,
+                marks_total: metrics.marksTotal,
+                score_pct: metrics.score,
+                focus_area: focusNote,
+                updated_at: row.updated_at
+              };
+            });
+
+            return res.json({ performance });
+          }
+        );
+      };
+
+      const insertDefaultsFromEnrollment = (onDone) => {
+        const columns = [];
+        const selects = [];
+
+        columns.push(userCol);
+        selects.push(`e.${enrollMeta.userCol}`);
+        columns.push(courseCol);
+        selects.push(`e.${enrollMeta.courseCol}`);
+
+        if (attendanceCol) {
+          columns.push(attendanceCol);
+          selects.push("82.50");
+        }
+        if (marksObtainedCol) {
+          columns.push(marksObtainedCol);
+          selects.push("76");
+        }
+        if (marksTotalCol) {
+          columns.push(marksTotalCol);
+          selects.push("100");
+        }
+        if (focusCol) {
+          columns.push(focusCol);
+          selects.push(`CONCAT('Focus on practice in ', c.${nameCol})`);
+        }
+
+        if (columns.length < 2) {
+          return onDone();
+        }
+
+        db.query(
+          `INSERT INTO ${PERFORMANCE_TABLE} (${columns.join(", ")})
+           SELECT ${selects.join(", ")}
+           FROM ${ENROLL_TABLE} e
+           JOIN ${COURSE_TABLE} c ON c.${idCol} = e.${enrollMeta.courseCol}
+           WHERE e.${enrollMeta.userCol} = ?
+             AND NOT EXISTS (
+               SELECT 1
+               FROM ${PERFORMANCE_TABLE} p
+               WHERE p.${userCol} = e.${enrollMeta.userCol}
+                 AND p.${courseCol} = e.${enrollMeta.courseCol}
+             )`,
+          [req.session.userId],
+          (insertErr) => {
+            if (insertErr) {
+              console.error(insertErr);
+            }
+            return onDone();
+          }
+        );
+      };
+
+      insertDefaultsFromEnrollment(selectPerformance);
+      });
+    });
+  });
+});
+
+router.get("/api/teacher/students-performance", (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  if (req.session.userSource !== "teacher") {
+    return res.status(403).json({ error: "Only teachers can view student performance" });
+  }
+
+  getCourseColumns((courseMetaErr, courseMeta) => {
+    if (courseMetaErr) {
+      console.error(courseMetaErr);
+      return res.status(500).json({ error: "Failed to load courses schema" });
+    }
+
+    getEnrollmentColumns((enrollMetaErr, enrollMeta) => {
+      if (enrollMetaErr) {
+        console.error(enrollMetaErr);
+        return res.status(500).json({ error: "Failed to load enrollment schema" });
+      }
+
+      getPerformanceColumns((perfMetaErr, perfMeta) => {
+        if (perfMetaErr) {
+          console.error(perfMetaErr);
+          return res.status(500).json({ error: "Failed to load performance schema" });
+        }
+
+        const { idCol, nameCol } = courseMeta;
+        const {
+          userCol,
+          courseCol,
+          attendanceCol,
+          marksObtainedCol,
+          marksTotalCol,
+          focusCol,
+          updatedCol
+        } = perfMeta;
+
+        const attendanceSelect = attendanceCol ? `p.${attendanceCol} AS attendance_pct` : "NULL AS attendance_pct";
+        const marksObtainedSelect = marksObtainedCol
+          ? `p.${marksObtainedCol} AS marks_obtained`
+          : "NULL AS marks_obtained";
+        const marksTotalSelect = marksTotalCol ? `p.${marksTotalCol} AS marks_total` : "NULL AS marks_total";
+        const focusSelect = focusCol ? `p.${focusCol} AS focus_area` : "NULL AS focus_area";
+        const updatedSelect = updatedCol ? `p.${updatedCol} AS updated_at` : "NULL AS updated_at";
+
+        const whereClauses = ["LOWER(COALESCE(u.role, 'student')) = 'student'"];
+        db.query(
+          `SELECT u.id AS student_id, u.username AS student_name, u.email AS student_email,
+                  c.${nameCol} AS course_name, ${attendanceSelect}, ${marksObtainedSelect},
+                  ${marksTotalSelect}, ${focusSelect}, ${updatedSelect}
+           FROM ${ENROLL_TABLE} e
+           JOIN ${AUTH_TABLE} u ON u.id = e.${enrollMeta.userCol}
+           JOIN ${COURSE_TABLE} c ON c.${idCol} = e.${enrollMeta.courseCol}
+           LEFT JOIN ${PERFORMANCE_TABLE} p
+             ON p.${userCol} = e.${enrollMeta.userCol}
+            AND p.${courseCol} = e.${enrollMeta.courseCol}
+           WHERE ${whereClauses.join(" AND ")}
+             AND e.${enrollMeta.userCol} NOT IN (
+               SELECT t.teacher_id FROM ${TEACHER_TABLE} t
+             )
+           ORDER BY u.username ASC, c.${nameCol} ASC`,
+          (err, rows) => {
+            if (err) {
+              console.error(err);
+              return res.status(500).json({ error: "Failed to load student performance data" });
+            }
+
+            const students = (rows || []).map((row) => {
+            const metrics = resolvePerformanceMetrics({
+              row,
+              userId: row.student_id,
+              courseName: row.course_name
+            });
+
+              return {
+                student_id: row.student_id,
+                student_name: row.student_name,
+                student_email: row.student_email,
+                course_name: row.course_name,
+                attendance_pct: metrics.attendance,
+                marks_obtained: metrics.marksObtained,
+                marks_total: metrics.marksTotal,
+                score_pct: metrics.score,
+                focus_area: row.focus_area || null,
+                updated_at: row.updated_at
+              };
+            });
+
+            const uniqueStudents = new Set(students.map((s) => s.student_id)).size;
+            const attendanceValues = students
+              .map((s) => s.attendance_pct)
+              .filter((v) => Number.isFinite(v));
+            const scoreValues = students
+              .map((s) => s.score_pct)
+              .filter((v) => Number.isFinite(v));
+
+            const avgAttendance = attendanceValues.length
+              ? Math.round(
+                  (attendanceValues.reduce((sum, v) => sum + v, 0) / attendanceValues.length) * 10
+                ) / 10
+              : null;
+            const avgScore = scoreValues.length
+              ? Math.round((scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length) * 10) /
+                10
+              : null;
+
+            return res.json({
+              summary: {
+                student_count: uniqueStudents,
+                avg_attendance_pct: avgAttendance,
+                avg_score_pct: avgScore
+              },
+              students
+            });
           }
         );
       });

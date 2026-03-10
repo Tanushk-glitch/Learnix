@@ -36,10 +36,399 @@
       </p>
       <a href="/pages/home.html" class="get-started-free">Go to Home</a>
     </section>
+
+    <section class="dashboard-section" id="performanceSection">
+      <div class="dashboard-header">
+        <div>
+          <span class="dashboard-kicker">Student Dashboard</span>
+          <h2>Performance Overview</h2>
+          <p>Track attendance, marks, and focus areas across your courses.</p>
+        </div>
+        <div class="dashboard-badge" id="performanceStatus">Loading...</div>
+      </div>
+      <div id="performanceGrid" class="performance-grid">
+        <div class="performance-card loading">
+          <h3>Loading performance data...</h3>
+          <p>Please wait while we fetch your results.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="dashboard-section" id="teacherSection" style="display:none;">
+      <div class="dashboard-header">
+        <div>
+          <span class="dashboard-kicker">Student Performance Dashboard</span>
+          <h2>Student Performance</h2>
+          <p>Review attendance and marks for each enrolled student.</p>
+        </div>
+        <div class="dashboard-badge" id="teacherStatus">Loading...</div>
+      </div>
+      <div class="teacher-filters">
+        <label>
+          <span>Academic Year</span>
+          <select id="teacherYearFilter">
+            <option value="all">All Years</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+          </select>
+        </label>
+        <label>
+          <span>Course</span>
+          <select id="teacherCourseFilter">
+            <option value="all">All Courses</option>
+          </select>
+        </label>
+        <label>
+          <span>Student Name</span>
+          <input id="teacherNameFilter" type="text" placeholder="Type a student name">
+        </label>
+      </div>
+      <div class="teacher-summary" id="teacherSummary">
+        <div class="teacher-summary-card">
+          <span>Total Students</span>
+          <strong id="teacherStudentCount">0</strong>
+        </div>
+        <div class="teacher-summary-card">
+          <span>Avg Attendance</span>
+          <strong id="teacherAvgAttendance">N/A</strong>
+        </div>
+        <div class="teacher-summary-card">
+          <span>Avg Score</span>
+          <strong id="teacherAvgScore">N/A</strong>
+        </div>
+      </div>
+      <div id="teacherGrid" class="teacher-grid">
+        <div class="teacher-card loading">
+          <h3>Loading students...</h3>
+          <p>Please wait while we fetch performance data.</p>
+        </div>
+      </div>
+      <div class="teacher-visuals">
+        <div class="teacher-chart-card">
+          <h3>Top Scores</h3>
+          <div id="teacherScoreChart" class="teacher-bar-chart"></div>
+        </div>
+        <div class="teacher-chart-card">
+          <h3>Attendance Overview</h3>
+          <div id="teacherAttendanceChart" class="teacher-bar-chart"></div>
+        </div>
+        <div class="teacher-chart-card">
+          <h3>Average Score</h3>
+          <div id="teacherScoreDonut" class="teacher-donut"></div>
+        </div>
+        <div class="teacher-chart-card">
+          <h3>Average Attendance</h3>
+          <div id="teacherAttendanceDonut" class="teacher-donut"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="/assets/js/main.js"></script>
   <script>
+    function formatMetric(value, suffix) {
+      if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
+      return `${value}${suffix || ""}`;
+    }
+
+    function renderPerformanceCards(performance) {
+      const grid = document.getElementById("performanceGrid");
+      if (!performance || performance.length === 0) {
+        grid.innerHTML = `
+          <div class="performance-empty">
+            <h3>No performance data yet</h3>
+            <p>Once your attendance and marks are recorded, you will see your course performance here.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = performance.map((item) => {
+        const attendance = formatMetric(item.attendance_pct, "%");
+        const score = formatMetric(item.score_pct, "%");
+        const marks =
+          item.marks_obtained !== null && item.marks_total !== null
+            ? `${item.marks_obtained} / ${item.marks_total}`
+            : "N/A";
+        const focusLabel = item.score_pct !== null && item.score_pct < 60
+          ? "Needs Focus"
+          : item.attendance_pct !== null && item.attendance_pct < 75
+            ? "Attendance Risk"
+            : "On Track";
+
+        return `
+          <article class="performance-card">
+            <div class="performance-head">
+              <h3>${item.course_name || "Untitled Course"}</h3>
+              <span class="performance-tag">${focusLabel}</span>
+            </div>
+            <div class="performance-metrics">
+              <div class="metric-row">
+                <span class="metric-label">Attendance</span>
+                <span class="metric-value">${attendance}</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Marks</span>
+                <span class="metric-value">${marks}</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Score</span>
+                <span class="metric-value">${score}</span>
+              </div>
+            </div>
+            <div class="performance-focus">
+              <span>Focus</span>
+              <p>${item.focus_area || "Keep practicing to improve."}</p>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    async function loadPerformance() {
+      const statusEl = document.getElementById("performanceStatus");
+      const section = document.getElementById("performanceSection");
+      try {
+        const response = await fetch("/api/me");
+        if (!response.ok) throw new Error("Not authenticated");
+        const user = await response.json();
+
+        if (!user || String(user.role || "").toLowerCase() !== "student") {
+          section.style.display = "none";
+          return;
+        }
+
+        const perfResponse = await fetch("/api/student-performance");
+        const payload = await perfResponse.json();
+        if (!perfResponse.ok) throw new Error(payload.error || "Failed to load performance data");
+
+        const performance = Array.isArray(payload.performance) ? payload.performance : [];
+        statusEl.textContent = performance.length === 0 ? "Awaiting data" : "Updated";
+        renderPerformanceCards(performance);
+      } catch (error) {
+        statusEl.textContent = "Unavailable";
+        renderPerformanceCards([]);
+      }
+    }
+
+    function renderTeacherCards(students) {
+      const grid = document.getElementById("teacherGrid");
+      if (!students || students.length === 0) {
+        grid.innerHTML = `
+          <div class="performance-empty">
+            <h3>No student data yet</h3>
+            <p>Enroll students and add performance data to see results here.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = students.map((item) => {
+        const attendance = formatMetric(item.attendance_pct, "%");
+        const score = formatMetric(item.score_pct, "%");
+        const marks =
+          item.marks_obtained !== null && item.marks_total !== null
+            ? `${item.marks_obtained} / ${item.marks_total}`
+            : "N/A";
+        const focusLabel = item.score_pct !== null && item.score_pct < 60
+          ? "Needs Focus"
+          : item.attendance_pct !== null && item.attendance_pct < 75
+            ? "Attendance Risk"
+            : "On Track";
+
+        return `
+          <article class="teacher-card">
+            <div class="teacher-card-head">
+              <div>
+                <h3>${item.student_name || "Student"}</h3>
+                <p>${item.student_email || ""}</p>
+              </div>
+              <span class="performance-tag">${focusLabel}</span>
+            </div>
+            <div class="teacher-course">${item.course_name || "Course"}</div>
+            <div class="performance-metrics">
+              <div class="metric-row">
+                <span class="metric-label">Attendance</span>
+                <span class="metric-value">${attendance}</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Marks</span>
+                <span class="metric-value">${marks}</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Score</span>
+                <span class="metric-value">${score}</span>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderBarChart(containerId, rows, valueKey, labelKey) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      if (!rows || rows.length === 0) {
+        container.innerHTML = '<div class="chart-empty">No data available.</div>';
+        return;
+      }
+
+      const values = rows.map((row) => Number(row[valueKey]) || 0);
+      const maxValue = Math.max(...values, 1);
+
+      container.innerHTML = rows.map((row) => {
+        const value = Number(row[valueKey]) || 0;
+        const width = Math.round((value / maxValue) * 100);
+        return `
+          <div class="chart-row">
+            <span class="chart-label">${row[labelKey]}</span>
+            <div class="chart-bar">
+              <div class="chart-fill" style="width:${width}%"></div>
+            </div>
+            <span class="chart-value">${value}%</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderDonut(containerId, value, label, color) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const safeValue = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+      const radius = 44;
+      const circumference = 2 * Math.PI * radius;
+      const dash = (safeValue / 100) * circumference;
+      const strokeColor = color || "#2563eb";
+      const displayValue = Number.isFinite(value) ? `${Math.round(safeValue)}%` : "N/A";
+
+      container.innerHTML = `
+        <div class="donut-wrap">
+          <svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="${label}">
+            <circle class="donut-bg" cx="60" cy="60" r="${radius}" />
+            <circle class="donut-fill" cx="60" cy="60" r="${radius}"
+              style="stroke:${strokeColor}; stroke-dasharray:${dash} ${circumference};" />
+          </svg>
+          <div class="donut-center">
+            <strong>${displayValue}</strong>
+            <span>${label}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    let teacherStudentCache = [];
+
+    function applyTeacherFilters() {
+      const courseFilter = document.getElementById("teacherCourseFilter");
+      const nameFilter = document.getElementById("teacherNameFilter");
+      const selectedCourse = courseFilter ? courseFilter.value : "all";
+      const nameQuery = nameFilter ? String(nameFilter.value || "").trim().toLowerCase() : "";
+      const filteredStudents = selectedCourse === "all"
+        ? teacherStudentCache
+        : teacherStudentCache.filter((s) => s.course_name === selectedCourse);
+      const finalStudents = nameQuery
+        ? filteredStudents.filter((s) =>
+            String(s.student_name || "").toLowerCase().includes(nameQuery)
+          )
+        : filteredStudents;
+
+      renderTeacherCards(finalStudents);
+
+      const topScores = finalStudents
+        .filter((s) => Number.isFinite(s.score_pct))
+        .sort((a, b) => b.score_pct - a.score_pct)
+        .slice(0, 6)
+        .map((s) => ({
+          label: `${s.student_name || "Student"} (${s.course_name || "Course"})`,
+          value: Math.round(s.score_pct)
+        }));
+
+      const topAttendance = finalStudents
+        .filter((s) => Number.isFinite(s.attendance_pct))
+        .sort((a, b) => b.attendance_pct - a.attendance_pct)
+        .slice(0, 6)
+        .map((s) => ({
+          label: `${s.student_name || "Student"} (${s.course_name || "Course"})`,
+          value: Math.round(s.attendance_pct)
+        }));
+
+      renderBarChart("teacherScoreChart", topScores, "value", "label");
+      renderBarChart("teacherAttendanceChart", topAttendance, "value", "label");
+    }
+
+    async function loadTeacherPerformance() {
+      const statusEl = document.getElementById("teacherStatus");
+      const section = document.getElementById("teacherSection");
+      if (!statusEl || !section) return;
+
+      try {
+        const response = await fetch("/api/me");
+        if (!response.ok) throw new Error("Not authenticated");
+        const user = await response.json();
+
+        if (!user || String(user.role || "").toLowerCase() !== "teacher") {
+          section.style.display = "none";
+          return;
+        }
+
+        section.style.display = "block";
+        const perfResponse = await fetch("/api/teacher/students-performance");
+        const payload = await perfResponse.json();
+        if (!perfResponse.ok) throw new Error(payload.error || "Failed to load student data");
+
+        const students = Array.isArray(payload.students) ? payload.students : [];
+        teacherStudentCache = students;
+        const summary = payload.summary || {};
+
+        const courseFilter = document.getElementById("teacherCourseFilter");
+        const nameFilter = document.getElementById("teacherNameFilter");
+        if (courseFilter) {
+          const courseNames = Array.from(new Set(students.map((s) => s.course_name).filter(Boolean)));
+          const current = courseFilter.value || "all";
+          courseFilter.innerHTML = `<option value="all">All Courses</option>` +
+            courseNames.map((name) => `<option value="${name}">${name}</option>`).join("");
+          courseFilter.value = current;
+          courseFilter.onchange = applyTeacherFilters;
+        }
+        if (nameFilter) {
+          nameFilter.oninput = applyTeacherFilters;
+        }
+
+        document.getElementById("teacherStudentCount").textContent = summary.student_count ?? 0;
+        document.getElementById("teacherAvgAttendance").textContent =
+          summary.avg_attendance_pct !== null && summary.avg_attendance_pct !== undefined
+            ? `${summary.avg_attendance_pct}%`
+            : "N/A";
+        document.getElementById("teacherAvgScore").textContent =
+          summary.avg_score_pct !== null && summary.avg_score_pct !== undefined
+            ? `${summary.avg_score_pct}%`
+            : "N/A";
+
+        statusEl.textContent = students.length === 0 ? "Awaiting data" : "Updated";
+        applyTeacherFilters();
+
+        renderDonut(
+          "teacherScoreDonut",
+          summary.avg_score_pct,
+          "Avg Score",
+          "#2563eb"
+        );
+        renderDonut(
+          "teacherAttendanceDonut",
+          summary.avg_attendance_pct,
+          "Avg Attendance",
+          "#22c55e"
+        );
+      } catch (error) {
+        statusEl.textContent = "Unavailable";
+        renderTeacherCards([]);
+        renderBarChart("teacherScoreChart", [], "value", "label");
+        renderBarChart("teacherAttendanceChart", [], "value", "label");
+        renderDonut("teacherScoreDonut", 0, "Avg Score", "#2563eb");
+        renderDonut("teacherAttendanceDonut", 0, "Avg Attendance", "#22c55e");
+      }
+    }
+
     async function loadDashboardUser() {
       try {
         const response = await fetch("/api/me");
@@ -56,6 +445,8 @@
     }
 
     loadDashboardUser();
+    loadPerformance();
+    loadTeacherPerformance();
   </script>
 </body>
 </html>
