@@ -17,8 +17,8 @@ Learnix is an educational platform designed to support learners in developing pr
 The project is developed using the following technologies:
 
 * **Frontend:** HTML, CSS, JavaScript
-* **Backend:** Python / Node.js (depending on implementation)
-* **Database:** MySQL / MongoDB (if applicable)
+* **Backend:**  Node.js,express.js
+* **Database:** MySQL 
 
 ## Project Structure
 
