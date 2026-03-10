@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ï»¿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -16,10 +16,10 @@
 
     <nav>
         <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
             <li><a href="/pages/courses.html">Courses</a></li>
-            <li><a href="#">Features</a></li>
-            <li><a href="#">About</a></li>
-            <li><a href="#">Contact</a></li>
+            <li><a href="#whyLearnixSection">Features</a></li>
+            <li><a href="/pages/about.html">About</a></li>
         </ul>
     </nav>
 
@@ -61,6 +61,7 @@
             No credit card required &bull; 30-day free trial &bull; Cancel anytime
         </div>
     </section>
+
 </main>
 
 <!-- Why Choose Learnix Section -->
@@ -121,37 +122,37 @@
         <article class="review-card">
             <div class="review-meta">
                 <strong>Riya Patil</strong>
-                <span>Data Science • Weekend Batch</span>
+                <span>Data Science â€¢ Weekend Batch</span>
             </div>
             <p>"Before joining, I could not clean datasets properly. After 6 weeks, I built my first mini project and my interview confidence improved a lot."</p>
-            <div class="review-foot">4.8/5 • Posted 3 days ago</div>
+            <div class="review-foot">4.8/5 â€¢ Posted 3 days ago</div>
         </article>
 
         <article class="review-card">
             <div class="review-meta">
                 <strong>Aman Sharma</strong>
-                <span>Python Basics • Evening Batch</span>
+                <span>Python Basics â€¢ Evening Batch</span>
             </div>
             <p>"The recorded sessions plus live doubt support really helped. I work full-time, so this format was practical and easy to follow."</p>
-            <div class="review-foot">4.7/5 • Posted 5 days ago</div>
+            <div class="review-foot">4.7/5 â€¢ Posted 5 days ago</div>
         </article>
 
         <article class="review-card">
             <div class="review-meta">
                 <strong>Neha Kulkarni</strong>
-                <span>UI/UX Fundamentals • Morning Batch</span>
+                <span>UI/UX Fundamentals â€¢ Morning Batch</span>
             </div>
             <p>"Assignments were very real-world. My portfolio now has 3 proper case studies, and I got shortlisted for two internships this week."</p>
-            <div class="review-foot">4.9/5 • Posted 1 week ago</div>
+            <div class="review-foot">4.9/5 â€¢ Posted 1 week ago</div>
         </article>
 
         <article class="review-card">
             <div class="review-meta">
                 <strong>Harsh Verma</strong>
-                <span>Machine Learning • Advanced Batch</span>
+                <span>Machine Learning â€¢ Advanced Batch</span>
             </div>
             <p>"Best part was weekly code reviews. My model evaluation mistakes reduced a lot, and I finally understood when to use precision vs recall."</p>
-            <div class="review-foot">4.8/5 • Posted 6 days ago</div>
+            <div class="review-foot">4.8/5 â€¢ Posted 6 days ago</div>
         </article>
     </div>
 </section>
@@ -164,16 +165,6 @@
     <div id="myCoursesGrid" class="courses-grid"></div>
 </section>
 
-<section class="section" style="text-align:center;">
-    <h2>Contact Us</h2>
-    <p>Name: Yash Chaphekar</p>
-    <p>
-        Phone:
-        <a href="tel:8433661025" style="color:#2563eb;text-decoration:none;">
-            8433661025
-        </a>
-    </p>
-</section>
 
 <footer>
     <p>&copy; 2023 Learnix. All rights reserved.</p>
@@ -303,6 +294,8 @@ fetch('/api/me', { credentials: 'same-origin' })
 
     const heroGetStartedBtn = document.getElementById('heroGetStartedBtn');
     if (heroGetStartedBtn) heroGetStartedBtn.style.display = 'none';
+    const scheduleDemo = document.querySelector('.schedule-demo');
+    if (scheduleDemo) scheduleDemo.style.display = 'none';
     const whyLearnixSection = document.getElementById('whyLearnixSection');
     if (whyLearnixSection) whyLearnixSection.style.display = 'none';
     const studentReviewsSection = document.getElementById('studentReviewsSection');
@@ -311,8 +304,10 @@ fetch('/api/me', { credentials: 'same-origin' })
   .catch(() => {
     // Guest user: keep login/signup/get-started visible.
   });
+
 </script>
 
 </body>
 </html>
+
 

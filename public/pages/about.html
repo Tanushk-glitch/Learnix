@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About | Learnix</title>
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">
+      <span class="logo-icon">&#128214;</span>
+      <span class="logo-text">Learnix</span>
+    </div>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="/pages/home.html">Home</a></li>
+        <li><a href="/dashboard">Dashboard</a></li>
+        <li><a href="/pages/courses.html">Courses</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions" id="navActions">
+      <a href="/pages/login.html" class="sign-in">Log in</a>
+      <a href="/pages/signup.html" class="sign-up" style="text-decoration:none;display:inline-block;">Sign Up</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="section" style="text-align:center;max-width:900px;margin:40px auto;">
+      <h2>About Learnix</h2>
+      <p>Learnix helps students build real-world skills through flexible, mentor-led learning.</p>
+      <div style="margin-top:24px;">
+        <h3 style="margin-bottom:8px;">Contact Us</h3>
+        <p>Name: Yash Chaphekar</p>
+        <p>
+          Phone:
+          <a href="tel:8433661025" style="color:#2563eb;text-decoration:none;">
+            8433661025
+          </a>
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/js/main.js"></script>
+  <script>
+    fetch('/api/me', { credentials: 'same-origin' })
+      .then((res) => {
+        if (!res.ok) throw new Error('Not logged in');
+        return res.json();
+      })
+      .then((user) => {
+        const navActions = document.getElementById('navActions');
+        if (navActions) {
+          navActions.innerHTML = `
+            <div class="profile-menu">
+              <button id="profileTrigger" class="profile-trigger" type="button">${user.email || 'My Account'}</button>
+              <div id="profileDropdown" class="profile-dropdown">
+                <div class="profile-email">${user.email || ''}</div>
+                <button id="menuMyCourses" class="profile-item" type="button">MY COURSES</button>
+                <button id="menuSignOut" class="profile-item" type="button">SIGN-OUT</button>
+              </div>
+            </div>
+          `;
+        }
+
+        const trigger = document.getElementById('profileTrigger');
+        const dropdown = document.getElementById('profileDropdown');
+        const myCoursesBtn = document.getElementById('menuMyCourses');
+        const signOutBtn = document.getElementById('menuSignOut');
+
+        if (trigger && dropdown) {
+          trigger.addEventListener('click', () => {
+            dropdown.classList.toggle('open');
+          });
+
+          document.addEventListener('click', (event) => {
+            if (!dropdown.contains(event.target) && !trigger.contains(event.target)) {
+              dropdown.classList.remove('open');
+            }
+          });
+        }
+
+        if (myCoursesBtn) {
+          myCoursesBtn.addEventListener('click', () => {
+            window.location.href = '/pages/courses.html';
+          });
+        }
+
+        if (signOutBtn) {
+          signOutBtn.addEventListener('click', () => {
+            window.location.href = '/logout';
+          });
+        }
+      })
+      .catch(() => {
+        // Guest user: keep login/signup visible.
+      });
+  </script>
+</body>
+</html>
