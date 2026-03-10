@@ -1,69 +1,73 @@
-# Learnix Project Structure
+# Learnix
 
-## Folder Layout
+## Overview
 
-```text
-.
-|-- public/
-|   |-- assets/
-|   |   |-- css/
-|   |   |   `-- main.css
-|   |   |-- js/
-|   |   |   |-- demo.js
-|   |   |   |-- firebase-config.js
-|   |   |   |-- firebase-signup.js
-|   |   |   `-- main.js
-|   |   `-- media/
-|   |       `-- videos/
-|   |           |-- DS.mp4
-|   |           |-- Python.mp4
-|   |           |-- UIUX.mp4
-|   |           `-- Web_dev.mp4
-|   |-- pages/
-|   |   |-- index.html
-|   |   |-- home.html
-|   |   |-- login.html
-|   |   |-- signup.html
-|   |   |-- dashboard.html
-|   |   |-- profile.html
-|   |   |-- demo.html
-|   |   |-- courses.html
-|   |   |-- webdev-video.html
-|   |   |-- python-video.html
-|   |   |-- ds-video.html
-|   |   |-- uiux-video.html
-|   |   `-- temp-ds.html
-|   `-- uploads/
-|-- src/
-|   |-- config/
-|   |   |-- database.js
-|   |   `-- firebaseAdmin.js
-|   |-- routes/
-|   |   `-- auth.js
-|   `-- server.js
-|-- sql/
-|   `-- schema.sql
-|-- scripts/
-|   `-- db-check.js
-|-- .env
-|-- package.json
-`-- package-lock.json
+Learnix is an educational platform designed to support learners in developing programming and technical skills through structured resources and practical learning materials. The project focuses on providing clear explanations, organized content, and an accessible interface to facilitate effective learning for beginners and intermediate users.
+
+## Features
+
+* Structured learning resources for programming and technical concepts
+* Beginner-friendly tutorials and explanations
+* Practice exercises to reinforce learning
+* Simple and user-friendly interface
+* Organized educational content for efficient study
+
+## Technologies Used
+
+The project is developed using the following technologies:
+
+* **Frontend:** HTML, CSS, JavaScript
+* **Backend:** Python / Node.js (depending on implementation)
+* **Database:** MySQL / MongoDB (if applicable)
+
+## Project Structure
+
+```
+learnix/
+│
+├── src/            # Application source code
+├── assets/         # Images, stylesheets, and other static files
+├── docs/           # Documentation files
+├── README.md       # Project documentation
+└── package.json    # Project dependencies (if applicable)
 ```
 
-## URL Conventions
+## Installation
 
-- Pages now live under `/pages/*`
-- Shared CSS/JS now live under `/assets/*`
-- Static course videos now live under `/assets/media/videos/*`
-- Teacher-uploaded videos continue to use `/uploads/*`
+1. Clone the repository:
 
-## Backward Compatibility
+```
+git clone https://github.com/your-username/learnix.git
+```
 
-Legacy URLs like `/login.html`, `/home.html`, `/courses.html`, and video page URLs are redirected to `/pages/...` from `src/server.js`.
+2. Navigate to the project directory:
 
-## Run
+```
+cd learnix
+```
 
-```bash
+3. Install required dependencies:
+
+```
 npm install
+```
+
+4. Run the application:
+
+```
 npm start
 ```
+
+## Usage
+
+After starting the application, open it in your web browser to access the Learnix platform. Users can explore learning modules, study programming concepts, and practice exercises designed to enhance their technical understanding.
+
+
+
+## License
+
+This project is distributed under the MIT License.
+
+## Author
+
+**Tanushk Baranwal**
