@@ -183,6 +183,15 @@
       background: #e8f1ff;
     }
 
+    .course-card button:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    .course-card button:disabled:hover {
+      background: inherit;
+    }
+
     .enroll-modal {
       position: fixed;
       inset: 0;
@@ -444,7 +453,6 @@
     <a href="#">Features</a>
     <a href="/pages/courses.html">Courses</a>
     <a href="#">About</a>
-    <a href="#">Contact</a>
   </nav>
 </header>
 
@@ -506,6 +514,54 @@
       </div>
       <button class="enroll-now-btn" data-course="UI / UX Design" data-video="/pages/uiux-video.html">Enroll Now</button>
       <button class="sample-btn" data-video="/pages/uiux-video.html">Sample Video</button>
+    </div>
+
+    <div class="course-card">
+      <div class="badge">Core CS</div>
+      <h3>DBMS</h3>
+      <p>Understand database design, SQL, normalization, and transaction management.</p>
+      <div class="course-meta">
+        <span>8 Weeks</span>
+        <span>Lab + Theory</span>
+      </div>
+      <button class="enroll-now-btn" data-course="DBMS" data-video="/pages/courses.html">Enroll Now</button>
+      <button class="sample-btn" type="button" disabled>Coming Soon</button>
+    </div>
+
+    <div class="course-card">
+      <div class="badge">Core CS</div>
+      <h3>Operating System</h3>
+      <p>Explore processes, memory management, scheduling, file systems, and concurrency.</p>
+      <div class="course-meta">
+        <span>8 Weeks</span>
+        <span>Systems</span>
+      </div>
+      <button class="enroll-now-btn" data-course="Operating System" data-video="/pages/courses.html">Enroll Now</button>
+      <button class="sample-btn" type="button" disabled>Coming Soon</button>
+    </div>
+
+    <div class="course-card">
+      <div class="badge">Advanced</div>
+      <h3>Computational Theory</h3>
+      <p>Study automata, formal languages, Turing machines, and the limits of computation.</p>
+      <div class="course-meta">
+        <span>7 Weeks</span>
+        <span>Conceptual</span>
+      </div>
+      <button class="enroll-now-btn" data-course="Computational Theory" data-video="/pages/courses.html">Enroll Now</button>
+      <button class="sample-btn" type="button" disabled>Coming Soon</button>
+    </div>
+
+    <div class="course-card">
+      <div class="badge">Elective</div>
+      <h3>Telecommunication</h3>
+      <p>Learn signal transmission, communication models, networking basics, and media systems.</p>
+      <div class="course-meta">
+        <span>6 Weeks</span>
+        <span>Applied</span>
+      </div>
+      <button class="enroll-now-btn" data-course="Telecommunication" data-video="/pages/courses.html">Enroll Now</button>
+      <button class="sample-btn" type="button" disabled>Coming Soon</button>
     </div>
 
   </div>
@@ -581,7 +637,11 @@
     'web development': 'Learn HTML, CSS, JavaScript and build responsive websites.',
     'python programming': 'Master Python for automation and real-world applications.',
     'data science': 'Learn data analysis, visualization, and machine learning.',
-    'ui / ux design': 'Design user-friendly interfaces using best practices.'
+    'ui / ux design': 'Design user-friendly interfaces using best practices.',
+    'dbms': 'Understand database design, SQL, normalization, and transaction management.',
+    'operating system': 'Explore processes, memory management, scheduling, file systems, and concurrency.',
+    'computational theory': 'Study automata, formal languages, Turing machines, and the limits of computation.',
+    'telecommunication': 'Learn signal transmission, communication models, networking basics, and media systems.'
   };
 
   function normalizeCourseName(name) {
