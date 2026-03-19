@@ -8,7 +8,7 @@ const authRoutes = require("./routes/auth");
 const db = require("./config/database");
 
 const app = express();
-const PUBLIC_DIR = path.join(__dirname, "..", "public");
+const PUBLIC_DIR = path.join(__dirname, "..", "..", "frontend", "public");
 const UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
 
 if (!fs.existsSync(UPLOADS_DIR)) {
