@@ -1027,12 +1027,12 @@ router.post("/login", (req, res) => {
 /*DAshboard*/
 router.get("/dashboard", (req, res) => {
     if (!req.session.userId) return res.redirect("/pages/login.html");
-    res.sendFile(path.join(__dirname, "..", "..", "public", "pages", "dashboard.html"));
+    res.sendFile(path.join(__dirname, "..", "..", "..", "frontend", "public", "pages", "dashboard.html"));
 });
 
 router.get("/profile", (req, res) => {
     if (!req.session.userId) return res.redirect("/pages/login.html");
-    res.sendFile(path.join(__dirname, "..", "..", "public", "pages", "profile.html"));
+    res.sendFile(path.join(__dirname, "..", "..", "..", "frontend", "public", "pages", "profile.html"));
 });
 
 router.get("/api/me", (req, res) => {

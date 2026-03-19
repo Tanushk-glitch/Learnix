@@ -2,11 +2,11 @@
   "name": "rac",
   "version": "1.0.0",
   "description": "",
-  "main": "src/server.js",
+  "main": "backend/src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node src/server.js",
-    "db:check": "node scripts/db-check.js",
+    "start": "node backend/src/server.js",
+    "dev": "node backend/src/server.js",
+    "db:check": "node backend/scripts/db-check.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
