@@ -235,6 +235,77 @@
       background: #e8f1ff;
     }
 
+
+    body.dark {
+      background: #020617;
+      color: #e5e7eb;
+    }
+
+    body.dark header {
+      background: #0f172a;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    }
+
+    body.dark nav a,
+    body.dark .video-card h2,
+    body.dark .question-display h4 {
+      color: #e5e7eb;
+    }
+
+    body.dark .hero {
+      background: linear-gradient(to bottom, #0f172a, #020617);
+    }
+
+    body.dark .hero h1,
+    body.dark .questions-section h3,
+    body.dark .summary-section h3,
+    body.dark .logo {
+      color: #93c5fd;
+    }
+
+    body.dark .hero p,
+    body.dark .video-card p,
+    body.dark footer,
+    body.dark .feedback,
+    body.dark #summary-content,
+    body.dark #summary-container {
+      color: #cbd5e1;
+    }
+
+    body.dark .video-section {
+      background: #020617;
+    }
+
+    body.dark .summary-section,
+    body.dark .questions-section,
+    body.dark .video-card {
+      background: #111827;
+      box-shadow: 0 14px 35px rgba(0,0,0,0.35);
+    }
+
+    body.dark .answer-input {
+      background: #0f172a;
+      border-color: #334155;
+      color: #e5e7eb;
+    }
+
+    body.dark .answer-input::placeholder {
+      color: #94a3b8;
+    }
+
+    body.dark .back-btn {
+      background: #0f172a;
+      color: #93c5fd;
+      border-color: #2563eb;
+    }
+
+    body.dark .back-btn:hover {
+      background: #172554;
+    }
+
+    body.dark footer {
+      background: #0f172a;
+    }
     /* ---------- FOOTER ---------- */
     footer {
       text-align: center;
@@ -246,7 +317,7 @@
   </style>
 </head>
 
-<body>
+<body class="dark">
 
 <header>
   <div class="logo"><span class="logo-icon">📖</span> Learnix</div>
@@ -347,10 +418,16 @@
   const courseName = 'DBMS';
   const isEnrolled = new URLSearchParams(window.location.search).get('enrolled') === '1';
 
+  generateBtn.textContent = isEnrolled ? 'Generate Summary & Questions' : 'Generate Summary';
+
   async function generateFromServer() {
+    if (!isEnrolled) {
+      useSample();
+      return;
+    }
     const src = document.getElementById('video-source').getAttribute('src');
     summaryContent.textContent = 'Generating summary and questions...';
-    questionsSection.style.display = '';
+    questionsSection.style.display = isEnrolled ? '' : 'none';
     generateBtn.disabled = true;
     try {
       const res = await fetch('/api/generate', {
@@ -507,12 +584,18 @@
   displayQuestion();
 
   if (isEnrolled) {
-    questionsSection.style.display = '';
+    questionsSection.style.display = isEnrolled ? '' : 'none';
     generateFromServer();
   }
 </script>
 
+<script>
+  if (!localStorage.getItem('learnix-theme')) {
+    localStorage.setItem('learnix-theme', 'dark');
+  }
+</script>
 <script src="/assets/js/main.js"></script>
 </body>
 </html>
+
 
