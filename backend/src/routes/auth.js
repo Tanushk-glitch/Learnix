@@ -66,10 +66,27 @@ const normalizeLegacyPagePath = (inputPath) => {
   return LEGACY_PAGE_PATH_MAP[canonical] || raw;
 };
 
-const resolveCourseVideoPath = (courseName, uploadedVideoPath) =>
-  normalizeLegacyPagePath(uploadedVideoPath) ||
-  COURSE_VIDEO_MAP[normalizeCourseName(courseName)] ||
-  "/pages/courses.html";
+const buildUploadedCoursePagePath = (courseName, uploadedVideoPath) => {
+  const normalizedVideoPath = String(uploadedVideoPath || "").trim();
+  if (!normalizedVideoPath) return "";
+
+  const params = new URLSearchParams({
+    course: String(courseName || "").trim() || "Uploaded Course",
+    video: normalizedVideoPath
+  });
+  return `/pages/uploaded-course.html?${params.toString()}`;
+};
+
+const resolveCourseVideoPath = (courseName, uploadedVideoPath) => {
+  const normalizedUploadedPath = normalizeLegacyPagePath(uploadedVideoPath);
+  if (normalizedUploadedPath.startsWith("/uploads/")) {
+    return buildUploadedCoursePagePath(courseName, normalizedUploadedPath);
+  }
+
+  return normalizedUploadedPath ||
+    COURSE_VIDEO_MAP[normalizeCourseName(courseName)] ||
+    "/pages/courses.html";
+};
 
 db.query(
   `CREATE TABLE IF NOT EXISTS ${DEPT_TABLE} (
@@ -267,6 +284,79 @@ const ensureCourseColumn = (columnName, definition) => {
 };
 
 ensureCourseColumn("video_path", "VARCHAR(255) NULL");
+ensureCourseColumn("course_period", "VARCHAR(100) NULL");
+ensureCourseColumn("teacher_id", "INT NULL");
+
+const backfillLegacyCourseIds = () => {
+  db.query(`SHOW COLUMNS FROM ${COURSE_TABLE}`, (metaErr, metaRows) => {
+    if (metaErr) {
+      console.error("Failed to inspect courses schema for legacy id backfill:", metaErr.message);
+      return;
+    }
+
+    const fields = new Set((metaRows || []).map((row) => row.Field));
+    const nameCol = fields.has("course_name")
+      ? "course_name"
+      : fields.has("courses_name")
+        ? "courses_name"
+        : fields.has("name")
+          ? "name"
+          : null;
+
+    if (!fields.has("course_id") || !nameCol) {
+      return;
+    }
+
+    db.query(
+      `SELECT course_id
+       FROM ${COURSE_TABLE}
+       WHERE course_id IS NOT NULL`,
+      (findErr, rows) => {
+        if (findErr) {
+          console.error("Failed to inspect legacy course ids:", findErr.message);
+          return;
+        }
+
+        const numericIds = (rows || [])
+          .map((row) => Number(row.course_id))
+          .filter((value) => Number.isInteger(value) && value > 0);
+        let nextId = numericIds.length ? Math.max(...numericIds) + 1 : 1;
+
+        db.query(
+          `SELECT ${nameCol} AS course_name, course_id, video_path
+           FROM ${COURSE_TABLE}
+           WHERE course_id IS NULL`,
+          (legacyErr, legacyRows) => {
+            if (legacyErr) {
+              console.error("Failed to fetch legacy courses without ids:", legacyErr.message);
+              return;
+            }
+
+            (legacyRows || []).forEach((row) => {
+              const rawName = row.course_name || `legacy-course-${nextId}`;
+              const assignedId = nextId++;
+              db.query(
+                `UPDATE ${COURSE_TABLE}
+                 SET course_id = ?
+                 WHERE course_id IS NULL AND ${nameCol} = ? AND video_path <=> ?`,
+                [assignedId, rawName, row.video_path || null],
+                (updateErr) => {
+                  if (updateErr) {
+                    console.error(`Failed to assign legacy course id for ${rawName}:`, updateErr.message);
+                  } else {
+                    courseColumnCache = null;
+                  }
+                }
+              );
+            });
+          }
+        );
+      }
+    );
+  });
+};
+
+backfillLegacyCourseIds();
 
 const ensurePerformanceColumn = (columnName, definition) => {
   db.query(
@@ -443,6 +533,11 @@ const getCourseColumns = (callback) => {
           ? "name"
           : null;
     const creditsCol = fields.has("credits") ? "credits" : null;
+    const periodCol = fields.has("course_period")
+      ? "course_period"
+      : fields.has("period")
+        ? "period"
+        : null;
     const deptCol = fields.has("dept_id") ? "dept_id" : null;
     const teacherCol = fields.has("teacher_id") ? "teacher_id" : null;
     const videoCol = fields.has("video_path")
@@ -464,6 +559,7 @@ const getCourseColumns = (callback) => {
       idCol,
       nameCol,
       creditsCol,
+      periodCol,
       deptCol,
       teacherCol,
       videoCol,
@@ -1460,7 +1556,7 @@ router.get("/api/teacher/students-performance", (req, res) => {
   });
 });
 
-router.get("/api/courses", (_req, res) => {
+router.get("/api/courses", (req, res) => {
   getCourseColumns((courseMetaErr, courseMeta) => {
     if (courseMetaErr) {
       console.error(courseMetaErr);
@@ -1473,10 +1569,12 @@ router.get("/api/courses", (_req, res) => {
         return res.status(500).json({ error: "Failed to load department schema" });
       }
 
-      const { idCol, nameCol, creditsCol, deptCol, teacherCol, videoCol } = courseMeta;
+      const { idCol, nameCol, creditsCol, periodCol, deptCol, teacherCol, videoCol } = courseMeta;
       const creditsSelect = creditsCol ? `c.${creditsCol} AS credits` : "NULL AS credits";
+      const periodSelect = periodCol ? `c.${periodCol} AS course_period` : "NULL AS course_period";
       const deptSelect = deptCol ? `d.${deptMeta.nameCol} AS dept_name` : "NULL AS dept_name";
       const teacherSelect = teacherCol ? "t.name AS teacher_name" : "NULL AS teacher_name";
+      const teacherIdSelect = teacherCol ? `c.${teacherCol} AS teacher_id` : "NULL AS teacher_id";
       const videoSelect = videoCol ? `c.${videoCol} AS video_path` : "NULL AS video_path";
       const deptJoin = deptCol
         ? `LEFT JOIN ${DEPT_TABLE} d ON d.${deptMeta.idCol} = c.${deptCol}`
@@ -1486,7 +1584,7 @@ router.get("/api/courses", (_req, res) => {
         : `LEFT JOIN ${TEACHER_TABLE} t ON 1 = 0`;
 
       db.query(
-        `SELECT c.${idCol} AS course_id, c.${nameCol} AS course_name, ${creditsSelect}, ${deptSelect}, ${teacherSelect}, ${videoSelect}
+        `SELECT c.${idCol} AS course_id, c.${nameCol} AS course_name, ${creditsSelect}, ${periodSelect}, ${deptSelect}, ${teacherSelect}, ${teacherIdSelect}, ${videoSelect}
          FROM ${COURSE_TABLE} c
          ${deptJoin}
          ${teacherJoin}
@@ -1497,9 +1595,17 @@ router.get("/api/courses", (_req, res) => {
             return res.status(500).json({ error: "Failed to fetch courses" });
           }
 
+          const currentTeacherId =
+            req.session && req.session.userSource === "teacher" ? Number(req.session.userId) : null;
           const courses = (rows || []).map((course) => ({
             ...course,
-            video_path: resolveCourseVideoPath(course.course_name, course.video_path)
+            video_path: resolveCourseVideoPath(course.course_name, course.video_path),
+            can_delete:
+              currentTeacherId !== null &&
+              (
+                Number(course.teacher_id) === currentTeacherId ||
+                (!course.teacher_id && String(course.video_path || "").startsWith("/uploads/"))
+              )
           }));
           return res.json({ courses });
         }

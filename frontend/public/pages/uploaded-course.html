@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uploaded Course | Learnix</title>
+  <style>
+    :root {
+      --bg: #081120;
+      --panel: rgba(11, 23, 43, 0.92);
+      --panel-soft: rgba(18, 37, 66, 0.85);
+      --line: rgba(148, 163, 184, 0.22);
+      --text: #e5eefc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-strong: #0ea5e9;
+      --success: #22c55e;
+      --danger: #f87171;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(14, 165, 233, 0.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 28%),
+        linear-gradient(180deg, #07101d 0%, #0b1628 100%);
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 6vw;
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    nav {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    nav a:hover { color: var(--text); }
+
+    .hero {
+      padding: 42px 6vw 24px;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.13);
+      color: #bae6fd;
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 16px 0 10px;
+      font-size: clamp(2rem, 4vw, 3.6rem);
+      line-height: 1.05;
+    }
+
+    .hero p {
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 1.35fr 1fr;
+      gap: 22px;
+      padding: 12px 6vw 48px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.25rem;
+    }
+
+    .panel p,
+    .panel li,
+    .panel div {
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .video-wrap video {
+      width: 100%;
+      border-radius: 18px;
+      background: #020617;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    button,
+    .back-link {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+    }
+
+    button:hover,
+    .back-link:hover {
+      transform: translateY(-1px);
+    }
+
+    .primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #04111f;
+      font-weight: 700;
+    }
+
+    .secondary,
+    .back-link {
+      background: var(--panel-soft);
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .status {
+      min-height: 24px;
+      margin-top: 12px;
+      color: #bae6fd;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .summary-content p {
+      margin: 0 0 14px;
+    }
+
+    .question-card {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      margin-top: 14px;
+    }
+
+    .question-card strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(14, 165, 233, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.16);
+      color: #bae6fd;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Learnix</div>
+    <nav>
+      <a href="/pages/home.html">Home</a>
+      <a href="/pages/courses.html">Courses</a>
+      <a href="/pages/profile.html">Profile</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <span class="eyebrow">Uploaded Course</span>
+    <h1 id="course-title">Course Video</h1>
+    <p id="course-subtitle">Teacher-uploaded learning content with an AI-generated summary and review questions.</p>
+  </section>
+
+  <section class="layout">
+    <div class="panel">
+      <h2>AI Summary</h2>
+      <div id="summary-content" class="summary-content">Generating a side-by-side summary for this course...</div>
+      <div class="actions">
+        <button id="generate-btn" class="primary" type="button">Generate Again</button>
+      </div>
+      <div id="summary-status" class="status"></div>
+    </div>
+
+    <div class="panel video-wrap">
+      <h2>Course Video</h2>
+      <p id="video-description">Watch the uploaded lecture, then use the summary and quiz to revise the main ideas.</p>
+      <video id="course-video" controls>
+        <source id="video-source" src="" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+      <div class="meta">
+        <span id="course-chip">Custom Upload</span>
+        <span>Summary + Quiz</span>
+      </div>
+      <div class="actions">
+        <a class="back-link" href="/pages/courses.html">Back to Courses</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Quiz Questions</h2>
+      <div id="questions-content">Questions will appear here after generation.</div>
+    </div>
+  </section>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const courseName = String(params.get('course') || 'Uploaded Course').trim();
+    const videoUrl = String(params.get('video') || '').trim();
+    const isEnrolled = params.get('enrolled') === '1';
+
+    const titleNode = document.getElementById('course-title');
+    const subtitleNode = document.getElementById('course-subtitle');
+    const courseChip = document.getElementById('course-chip');
+    const videoDescription = document.getElementById('video-description');
+    const summaryContent = document.getElementById('summary-content');
+    const summaryStatus = document.getElementById('summary-status');
+    const questionsContent = document.getElementById('questions-content');
+    const questionsPanel = questionsContent.closest('.panel');
+    const generateBtn = document.getElementById('generate-btn');
+    const videoSource = document.getElementById('video-source');
+    const videoElement = document.getElementById('course-video');
+
+    titleNode.textContent = courseName;
+    subtitleNode.textContent = isEnrolled
+      ? `${courseName} is now available from the courses page with the same side-by-side learning layout as the built-in lessons.`
+      : `${courseName} preview is available here. Enroll in this specific course to unlock quiz questions.`;
+    courseChip.textContent = courseName;
+    videoDescription.textContent = `Watch the ${courseName} lecture, then review the generated summary and practice questions beside it.`;
+
+    if (!videoUrl) {
+      summaryContent.textContent = 'No video source was provided for this uploaded course.';
+      summaryStatus.textContent = 'Open this page from the Courses page after uploading a video.';
+      summaryStatus.className = 'status error';
+      generateBtn.disabled = true;
+    } else {
+      videoSource.src = videoUrl;
+      videoElement.load();
+    }
+
+    if (!isEnrolled && questionsPanel) {
+      questionsPanel.style.display = 'none';
+      questionsContent.textContent = 'Quiz questions unlock after enrollment.';
+    }
+
+    function renderQuestions(questions) {
+      if (!isEnrolled) {
+        questionsContent.textContent = 'Quiz questions unlock after enrollment.';
+        return;
+      }
+
+      if (!Array.isArray(questions) || questions.length === 0) {
+        questionsContent.textContent = 'No quiz questions were generated for this video yet.';
+        return;
+      }
+
+      questionsContent.innerHTML = questions.map((item, index) => `
+        <div class="question-card">
+          <strong>Q${index + 1}. ${item.question || 'Question unavailable'}</strong>
+          <div>${item.answer || 'Answer unavailable'}</div>
+        </div>
+      `).join('');
+    }
+
+    async function generateSummary() {
+      if (!videoUrl) return;
+
+      summaryStatus.textContent = isEnrolled
+        ? 'Generating summary and questions...'
+        : 'Generating summary...';
+      summaryStatus.className = 'status';
+      summaryContent.textContent = 'Reading the uploaded course details and preparing the summary...';
+      if (isEnrolled) {
+        questionsContent.textContent = 'Generating quiz questions...';
+      }
+      generateBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseName,
+            videoUrl,
+            maxQuestions: 5
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to generate summary');
+        }
+
+        summaryContent.innerHTML = data.summary_html || `<p>${data.summary || 'No summary returned.'}</p>`;
+        summaryStatus.textContent = isEnrolled ? 'Summary and quiz ready.' : 'Summary ready.';
+        renderQuestions(data.questions || []);
+      } catch (err) {
+        summaryContent.textContent = err.message || 'Failed to generate summary.';
+        summaryStatus.textContent = 'Generation failed.';
+        summaryStatus.className = 'status error';
+        questionsContent.textContent = 'Questions could not be generated.';
+      } finally {
+        generateBtn.disabled = false;
+      }
+    }
+
+    generateBtn.addEventListener('click', generateSummary);
+
+    if (videoUrl) {
+      generateSummary();
+    }
+  </script>
+</body>
+</html>
