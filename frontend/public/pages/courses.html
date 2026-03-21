@@ -192,6 +192,15 @@
       background: inherit;
     }
 
+    .delete-course-btn {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+    }
+
+    .delete-course-btn:hover {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+    }
+
     .enroll-modal {
       position: fixed;
       inset: 0;
@@ -296,6 +305,27 @@
       display: inline-block;
     }
 
+    .teacher-delete-fab {
+      position: fixed;
+      left: 22px;
+      bottom: 22px;
+      z-index: 1001;
+      border: none;
+      border-radius: 999px;
+      background: #ef4444;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 14px 18px;
+      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
+      cursor: pointer;
+      display: none;
+    }
+
+    .teacher-delete-fab.visible {
+      display: inline-block;
+    }
+
     .teacher-upload-modal {
       position: fixed;
       inset: 0;
@@ -342,6 +372,62 @@
 
     .teacher-upload-status.error {
       color: #dc2626;
+    }
+
+    .teacher-delete-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 14px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    .teacher-delete-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #f8fafc;
+    }
+
+    .teacher-delete-item strong {
+      display: block;
+      color: var(--text-dark);
+      margin-bottom: 4px;
+    }
+
+    .teacher-delete-item span {
+      font-size: 13px;
+      color: var(--text-light);
+    }
+
+    .teacher-delete-empty {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #f8fafc;
+      color: var(--text-light);
+      text-align: left;
+    }
+
+    .teacher-delete-action {
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      font-weight: 700;
+      padding: 10px 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .teacher-delete-action:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
     }
 
     /* ---------- CTA ---------- */
@@ -594,18 +680,32 @@
 </div>
 
 <button id="teacher-upload-fab" class="teacher-upload-fab">Upload Video</button>
+<button id="teacher-delete-fab" class="teacher-delete-fab">Delete Course</button>
 
 <div id="teacher-upload-modal" class="teacher-upload-modal">
   <div class="teacher-upload-panel">
     <h3>Upload Course Video</h3>
     <p>Teacher upload panel</p>
     <input id="teacher-course-name" class="enroll-input" type="text" placeholder="Course Name">
+    <input id="teacher-course-period" class="enroll-input" type="text" placeholder="Course Period (e.g. 8 Weeks)">
     <input id="teacher-video-file" class="enroll-input" type="file" accept="video/*">
     <div class="enroll-actions">
       <button id="teacher-upload-submit" class="enroll-submit">Upload</button>
       <button id="teacher-upload-cancel" class="enroll-cancel">Cancel</button>
     </div>
     <div id="teacher-upload-status" class="teacher-upload-status"></div>
+  </div>
+</div>
+
+<div id="teacher-delete-modal" class="teacher-upload-modal">
+  <div class="teacher-upload-panel">
+    <h3>Delete Courses</h3>
+    <p>Select one of your uploaded courses to remove it.</p>
+    <div id="teacher-delete-list" class="teacher-delete-list"></div>
+    <div id="teacher-delete-status" class="teacher-upload-status"></div>
+    <div class="enroll-actions">
+      <button id="teacher-delete-close" class="enroll-cancel">Close</button>
+    </div>
   </div>
 </div>
 
@@ -622,17 +722,24 @@
   const courseGrid = document.getElementById('course-grid');
   let enrollNowButtons = [];
   const teacherUploadFab = document.getElementById('teacher-upload-fab');
+  const teacherDeleteFab = document.getElementById('teacher-delete-fab');
   const teacherUploadModal = document.getElementById('teacher-upload-modal');
+  const teacherDeleteModal = document.getElementById('teacher-delete-modal');
   const teacherCourseName = document.getElementById('teacher-course-name');
+  const teacherCoursePeriod = document.getElementById('teacher-course-period');
   const teacherVideoFile = document.getElementById('teacher-video-file');
   const teacherUploadSubmit = document.getElementById('teacher-upload-submit');
   const teacherUploadCancel = document.getElementById('teacher-upload-cancel');
   const teacherUploadStatus = document.getElementById('teacher-upload-status');
+  const teacherDeleteList = document.getElementById('teacher-delete-list');
+  const teacherDeleteStatus = document.getElementById('teacher-delete-status');
+  const teacherDeleteClose = document.getElementById('teacher-delete-close');
 
   let selectedCourseName = '';
   let selectedVideoPath = '';
   let currentUser = null;
   const enrolledCoursesByName = new Map();
+  const teacherOwnedCourses = new Map();
   const defaultCourseDescriptions = {
     'web development': 'Learn HTML, CSS, JavaScript and build responsive websites.',
     'python programming': 'Master Python for automation and real-world applications.',
@@ -653,8 +760,71 @@
     window.location.href = `${videoPath}${separator}enrolled=1`;
   }
 
+  function getCoursePeriodLabel(course) {
+    const rawPeriod = String(course?.course_period || '').trim();
+    return rawPeriod || 'Self-paced';
+  }
+
   function getAllEnrollButtons() {
     return Array.from(document.querySelectorAll('.enroll-now-btn'));
+  }
+
+  function removeCourseCardByName(courseName) {
+    const normalizedName = normalizeCourseName(courseName);
+    teacherOwnedCourses.delete(normalizedName);
+    const enrollBtn = Array.from(document.querySelectorAll('.enroll-now-btn')).find(
+      (btn) => normalizeCourseName(btn.dataset.course) === normalizedName
+    );
+
+    if (!enrollBtn) return;
+
+    const card = enrollBtn.closest('.course-card');
+    if (card) {
+      card.remove();
+    }
+  }
+
+  function syncTeacherControls(card, course) {
+    if (!course || !course.course_name) return;
+
+    const normalizedName = normalizeCourseName(course.course_name);
+    if (course.can_delete) {
+      teacherOwnedCourses.set(normalizedName, {
+        course_id: course.course_id,
+        course_name: course.course_name,
+        course_period: course.course_period || ''
+      });
+    } else {
+      teacherOwnedCourses.delete(normalizedName);
+    }
+  }
+
+  function renderTeacherDeleteList() {
+    const ownedCourses = Array.from(teacherOwnedCourses.values()).sort((a, b) =>
+      String(a.course_name || '').localeCompare(String(b.course_name || ''))
+    );
+
+    if (ownedCourses.length === 0) {
+      teacherDeleteList.innerHTML = '<div class="teacher-delete-empty">You do not have any uploaded courses to delete yet.</div>';
+      return;
+    }
+
+    teacherDeleteList.innerHTML = ownedCourses.map((course) => `
+      <div class="teacher-delete-item">
+        <div>
+          <strong>${course.course_name}</strong>
+          <span>${course.course_period || 'Self-paced'}</span>
+        </div>
+        <button
+          class="teacher-delete-action"
+          type="button"
+          data-course-id="${course.course_id || ''}"
+          data-course-name="${String(course.course_name || '').replace(/"/g, '&quot;')}"
+        >
+          Delete
+        </button>
+      </div>
+    `).join('');
   }
 
   function refreshEnrollButtonLabels() {
@@ -675,6 +845,7 @@
     const normalizedName = normalizeCourseName(course.course_name);
     const safeCourseName = String(course.course_name);
     const safeVideoPath = String(course.video_path || '/pages/courses.html');
+    const safeCoursePeriod = getCoursePeriodLabel(course);
     const description =
       defaultCourseDescriptions[normalizedName] || 'Teacher-uploaded course content.';
 
@@ -688,6 +859,9 @@
       if (card) {
         const sampleBtn = card.querySelector('.sample-btn');
         if (sampleBtn) sampleBtn.dataset.video = safeVideoPath;
+        const periodNode = card.querySelector('.course-meta span');
+        if (periodNode) periodNode.textContent = safeCoursePeriod;
+        syncTeacherControls(card, course);
       }
       return;
     }
@@ -699,7 +873,7 @@
       <h3></h3>
       <p></p>
       <div class="course-meta">
-        <span>Self-paced</span>
+        <span></span>
         <span>Video</span>
       </div>
       <button class="enroll-now-btn" data-course=""></button>
@@ -710,6 +884,8 @@
     if (titleNode) titleNode.textContent = safeCourseName;
     const descriptionNode = card.querySelector('p');
     if (descriptionNode) descriptionNode.textContent = description;
+    const periodNode = card.querySelector('.course-meta span');
+    if (periodNode) periodNode.textContent = safeCoursePeriod;
 
     const enrollBtn = card.querySelector('.enroll-now-btn');
     if (enrollBtn) {
@@ -723,6 +899,7 @@
       sampleBtn.dataset.video = safeVideoPath;
     }
 
+    syncTeacherControls(card, course);
     courseGrid.appendChild(card);
   }
 
@@ -778,6 +955,17 @@
     teacherUploadModal.classList.remove('open');
   }
 
+  function openTeacherDeleteModal() {
+    teacherDeleteStatus.textContent = '';
+    teacherDeleteStatus.className = 'teacher-upload-status';
+    renderTeacherDeleteList();
+    teacherDeleteModal.classList.add('open');
+  }
+
+  function closeTeacherDeleteModal() {
+    teacherDeleteModal.classList.remove('open');
+  }
+
   function isValidEnrollmentEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
@@ -795,6 +983,7 @@
 
       if (currentUser.role === 'teacher') {
         teacherUploadFab.classList.add('visible');
+        teacherDeleteFab.classList.add('visible');
         return;
       }
 
@@ -903,6 +1092,80 @@
     }
   }
 
+  async function deleteTeacherCourse(courseId, courseName, triggerButton) {
+    let normalizedCourseId = String(courseId || '').trim();
+    const normalizedCourseName = String(courseName || '').trim();
+    const button = triggerButton || null;
+
+    if (!normalizedCourseId && normalizedCourseName) {
+      const ownedCourse = teacherOwnedCourses.get(normalizeCourseName(normalizedCourseName));
+      if (ownedCourse && ownedCourse.course_id) {
+        normalizedCourseId = String(ownedCourse.course_id).trim();
+      }
+    }
+
+    if (!normalizedCourseId && normalizedCourseName) {
+      try {
+        const res = await fetch('/api/courses', { credentials: 'include' });
+        if (res.ok) {
+          const payload = await res.json();
+          const courses = Array.isArray(payload.courses) ? payload.courses : [];
+          const matchedCourse = courses.find((course) =>
+            course &&
+            course.can_delete &&
+            normalizeCourseName(course.course_name) === normalizeCourseName(normalizedCourseName)
+          );
+          if (matchedCourse && matchedCourse.course_id) {
+            normalizedCourseId = String(matchedCourse.course_id).trim();
+            syncTeacherControls(null, matchedCourse);
+            renderTeacherDeleteList();
+          }
+        }
+      } catch (err) {}
+    }
+
+    if (!normalizedCourseId) {
+      alert('Could not find the course id for deletion. Please refresh once and try again.');
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete "${normalizedCourseName}"? This will also remove enrollments and related course data.`);
+    if (!confirmed) return;
+
+    const originalLabel = button ? button.textContent : '';
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Deleting...';
+    }
+
+    try {
+      const res = await fetch(`/api/teacher/courses/${encodeURIComponent(normalizedCourseId)}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload.error || 'Delete failed');
+      }
+
+      removeCourseCardByName(normalizedCourseName);
+      renderTeacherDeleteList();
+      teacherUploadStatus.textContent = payload.message || 'Course deleted successfully.';
+      teacherUploadStatus.className = 'teacher-upload-status';
+      teacherDeleteStatus.textContent = payload.message || 'Course deleted successfully.';
+      teacherDeleteStatus.className = 'teacher-upload-status';
+    } catch (err) {
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+      teacherUploadStatus.textContent = err.message || 'Delete failed';
+      teacherUploadStatus.className = 'teacher-upload-status error';
+      teacherDeleteStatus.textContent = err.message || 'Delete failed';
+      teacherDeleteStatus.className = 'teacher-upload-status error';
+    }
+  }
+
   courseGrid.addEventListener('click', (event) => {
     const enrollBtn = event.target.closest('.enroll-now-btn');
     if (enrollBtn) {
@@ -941,13 +1204,29 @@
   });
 
   teacherUploadFab.addEventListener('click', openTeacherUploadModal);
+  teacherDeleteFab.addEventListener('click', openTeacherDeleteModal);
   teacherUploadCancel.addEventListener('click', closeTeacherUploadModal);
+  teacherDeleteClose.addEventListener('click', closeTeacherDeleteModal);
   teacherUploadModal.addEventListener('click', (e) => {
     if (e.target === teacherUploadModal) closeTeacherUploadModal();
+  });
+  teacherDeleteModal.addEventListener('click', (e) => {
+    if (e.target === teacherDeleteModal) closeTeacherDeleteModal();
+  });
+  teacherDeleteList.addEventListener('click', (event) => {
+    const deleteBtn = event.target.closest('.teacher-delete-action');
+    if (!deleteBtn) return;
+
+    deleteTeacherCourse(
+      deleteBtn.dataset.courseId,
+      deleteBtn.dataset.courseName,
+      deleteBtn
+    );
   });
 
   teacherUploadSubmit.addEventListener('click', async () => {
     const courseName = teacherCourseName.value.trim();
+    const coursePeriod = teacherCoursePeriod.value.trim();
     const file = teacherVideoFile.files && teacherVideoFile.files[0];
 
     if (!courseName) {
@@ -962,6 +1241,12 @@
       return;
     }
 
+    if (!coursePeriod) {
+      teacherUploadStatus.textContent = 'Course period is required.';
+      teacherUploadStatus.className = 'teacher-upload-status error';
+      return;
+    }
+
     teacherUploadSubmit.disabled = true;
     teacherUploadStatus.textContent = 'Uploading video...';
     teacherUploadStatus.className = 'teacher-upload-status';
@@ -969,6 +1254,7 @@
     try {
       const formData = new FormData();
       formData.append('courseName', courseName);
+      formData.append('coursePeriod', coursePeriod);
       formData.append('courseVideo', file);
 
       const res = await fetch('/api/teacher/upload-video', {
@@ -983,12 +1269,18 @@
 
       teacherUploadStatus.textContent = `Uploaded: ${payload.filePath}`;
       upsertCourseCard({
+        course_id: payload.courseId,
         course_name: payload.courseName || courseName,
-        video_path: payload.filePath
+        video_path: payload.coursePagePath || payload.filePath,
+        course_period: payload.coursePeriod || coursePeriod,
+        can_delete: true
       });
+      renderTeacherDeleteList();
       refreshEnrollButtonLabels();
       teacherCourseName.value = '';
+      teacherCoursePeriod.value = '';
       teacherVideoFile.value = '';
+      closeTeacherUploadModal();
     } catch (err) {
       teacherUploadStatus.textContent = err.message || 'Upload failed';
       teacherUploadStatus.className = 'teacher-upload-status error';

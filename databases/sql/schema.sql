@@ -36,6 +36,7 @@ create table courses(
     course_id int auto_increment primary key,
     course_name varchar(100) not null,
     credits int not null,
+    course_period varchar(100) null,
     dept_id int,
     foreign key (dept_id) references dept(dept_id),
     teacher_id int,
