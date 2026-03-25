@@ -23,7 +23,14 @@ const COURSE_VIDEO_MAP = {
   "python programming": "/pages/python-video.html",
   "data science": "/pages/ds-video.html",
   "ui / ux design": "/pages/uiux-video.html",
-  "ui/ux design": "/pages/uiux-video.html"
+  "ui/ux design": "/pages/uiux-video.html",
+  "dbms": "/pages/dbms-video.html",
+  "operating system": "/pages/os-video.html",
+  "operating systems": "/pages/os-video.html",
+  "computational theory": "/pages/ct-video.html",
+  "theory of computation": "/pages/ct-video.html",
+  "telecommunication": "/pages/telecommunication-video.html",
+  "telecommunications": "/pages/telecommunication-video.html"
 };
 
 const LEGACY_PAGE_PATH_MAP = {

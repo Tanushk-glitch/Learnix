@@ -755,7 +755,16 @@
     return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
   }
 
+  function isFallbackCoursePath(videoPath) {
+    const normalizedPath = String(videoPath || '').trim().toLowerCase();
+    return !normalizedPath || normalizedPath === '/pages/courses.html' || normalizedPath === '/courses.html';
+  }
+
   function redirectToCourse(videoPath) {
+    if (isFallbackCoursePath(videoPath)) {
+      alert('This course page is not linked yet. Please refresh once and try again.');
+      return;
+    }
     const separator = videoPath.includes('?') ? '&' : '?';
     window.location.href = `${videoPath}${separator}enrolled=1`;
   }
