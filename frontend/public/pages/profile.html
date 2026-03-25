@@ -51,6 +51,13 @@
       return date.toLocaleDateString();
     }
 
+    function buildEnrolledCourseHref(videoPath) {
+      const normalizedPath = String(videoPath || "").trim();
+      if (!normalizedPath) return "/pages/courses.html";
+      const separator = normalizedPath.includes("?") ? "&" : "?";
+      return `${normalizedPath}${separator}enrolled=1`;
+    }
+
     async function loadMyCourses(user) {
       const list = document.getElementById("myCoursesList");
       list.innerHTML = "";
@@ -80,7 +87,7 @@
       courses.forEach((course) => {
         const item = document.createElement("li");
         const link = document.createElement("a");
-        link.href = `${course.video_path || "/pages/courses.html"}?enrolled=1`;
+        link.href = buildEnrolledCourseHref(course.video_path);
         link.textContent = course.course_name;
         const date = formatDate(course.enrollment_date);
         if (date) {

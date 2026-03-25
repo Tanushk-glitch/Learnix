@@ -10,6 +10,8 @@ const db = require("./config/database");
 const app = express();
 const PUBLIC_DIR = path.join(__dirname, "..", "..", "frontend", "public");
 const UPLOADS_DIR = path.join(PUBLIC_DIR, "uploads");
+const COURSE_TOPIC_TABLE = "course_topics";
+const COURSE_TOPIC_ATTENDANCE_TABLE = "course_topic_attendance";
 let courseColumnCache = null;
 let enrollmentCourseColumnCache = null;
 
@@ -77,6 +79,11 @@ const getCourseColumns = (callback) => {
       : fields.has("video_url")
         ? "video_url"
         : null;
+    const idColumnMeta = (rows || []).find((row) => row.Field === idCol);
+    const idAutoIncrement = !!(
+      idColumnMeta &&
+      String(idColumnMeta.Extra || "").toLowerCase().includes("auto_increment")
+    );
 
     if (!idCol || !nameCol) {
       return callback(new Error("Courses table is missing required columns"));
@@ -89,9 +96,77 @@ const getCourseColumns = (callback) => {
       periodCol,
       deptCol,
       teacherCol,
-      videoCol
+      videoCol,
+      idAutoIncrement
     };
     return callback(null, courseColumnCache);
+  });
+};
+
+const backfillLegacyCourseIds = () => {
+  db.query("SHOW COLUMNS FROM courses", (metaErr, metaRows) => {
+    if (metaErr) {
+      console.error("Failed to inspect courses schema for legacy id backfill:", metaErr.message);
+      return;
+    }
+
+    const fields = new Set((metaRows || []).map((row) => row.Field));
+    const nameCol = fields.has("course_name")
+      ? "course_name"
+      : fields.has("courses_name")
+        ? "courses_name"
+        : fields.has("name")
+          ? "name"
+          : null;
+
+    if (!fields.has("course_id") || !nameCol) {
+      return;
+    }
+
+    db.query(
+      `SELECT course_id FROM courses WHERE course_id IS NOT NULL`,
+      (findErr, rows) => {
+        if (findErr) {
+          console.error("Failed to inspect legacy course ids:", findErr.message);
+          return;
+        }
+
+        const numericIds = (rows || [])
+          .map((row) => Number(row.course_id))
+          .filter((value) => Number.isInteger(value) && value > 0);
+        let nextId = numericIds.length ? Math.max(...numericIds) + 1 : 1;
+
+        db.query(
+          `SELECT ${nameCol} AS course_name, course_id, video_path
+           FROM courses
+           WHERE course_id IS NULL`,
+          (legacyErr, legacyRows) => {
+            if (legacyErr) {
+              console.error("Failed to fetch legacy courses without ids:", legacyErr.message);
+              return;
+            }
+
+            (legacyRows || []).forEach((row) => {
+              const rawName = row.course_name || `legacy-course-${nextId}`;
+              const assignedId = nextId++;
+              db.query(
+                `UPDATE courses
+                 SET course_id = ?
+                 WHERE course_id IS NULL AND ${nameCol} = ? AND video_path <=> ?`,
+                [assignedId, rawName, row.video_path || null],
+                (updateErr) => {
+                  if (updateErr) {
+                    console.error(`Failed to assign legacy course id for ${rawName}:`, updateErr.message);
+                  } else {
+                    courseColumnCache = null;
+                  }
+                }
+              );
+            });
+          }
+        );
+      }
+    );
   });
 };
 
@@ -125,12 +200,36 @@ const getEnrollmentCourseColumn = (callback) => {
   });
 };
 
-const buildUploadedCoursePagePath = (courseName, videoPath) => {
-  const params = new URLSearchParams({
-    course: String(courseName || "").trim() || "Uploaded Course",
-    video: String(videoPath || "").trim()
-  });
+const buildUploadedCoursePagePath = (courseId, courseName, topicId, videoPath) => {
+  const params = new URLSearchParams();
+  const normalizedCourseId = Number(courseId);
+  const normalizedTopicId = Number(topicId);
+  const normalizedCourseName = String(courseName || "").trim() || "Uploaded Course";
+  const normalizedVideoPath = String(videoPath || "").trim();
+
+  params.set("course", normalizedCourseName);
+  if (Number.isInteger(normalizedCourseId) && normalizedCourseId > 0) {
+    params.set("courseId", String(normalizedCourseId));
+  }
+  if (Number.isInteger(normalizedTopicId) && normalizedTopicId > 0) {
+    params.set("topicId", String(normalizedTopicId));
+  }
+  if (normalizedVideoPath) {
+    params.set("video", normalizedVideoPath);
+  }
   return `/pages/uploaded-course.html?${params.toString()}`;
+};
+
+const removeUploadedFile = (rawVideoPath) => {
+  const normalizedPath = String(rawVideoPath || "").trim();
+  if (!normalizedPath.startsWith("/uploads/")) return;
+
+  const absoluteVideoPath = path.join(PUBLIC_DIR, normalizedPath.replace(/^\//, ""));
+  fs.unlink(absoluteVideoPath, (unlinkErr) => {
+    if (unlinkErr && unlinkErr.code !== "ENOENT") {
+      console.error("Failed to remove uploaded video:", unlinkErr.message);
+    }
+  });
 };
 
 
@@ -171,6 +270,201 @@ app.get("/UIUX_vid.html", (_req, res) => res.redirect("/pages/uiux-video.html"))
 app.get("/temp_ds.html", (_req, res) => res.redirect("/pages/temp-ds.html"));
 
 app.use(express.static(PUBLIC_DIR));
+backfillLegacyCourseIds();
+
+db.query(
+  `CREATE TABLE IF NOT EXISTS ${COURSE_TOPIC_TABLE} (
+    topic_id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    topic_name VARCHAR(150) NOT NULL,
+    topic_order INT NOT NULL DEFAULT 1,
+    video_path VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_course_topic (course_id, topic_name),
+    CONSTRAINT fk_course_topics_course
+      FOREIGN KEY (course_id) REFERENCES courses(course_id)
+      ON DELETE CASCADE
+  )`,
+  (err) => {
+    if (err) console.error("Failed to ensure course_topics table:", err.message);
+  }
+);
+
+db.query(
+  `CREATE TABLE IF NOT EXISTS ${COURSE_TOPIC_ATTENDANCE_TABLE} (
+    topic_attendance_id INT AUTO_INCREMENT PRIMARY KEY,
+    topic_id INT NOT NULL,
+    course_id INT NOT NULL,
+    auth_user_id INT NOT NULL,
+    marked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_topic_attendance (topic_id, auth_user_id),
+    CONSTRAINT fk_topic_attendance_topic
+      FOREIGN KEY (topic_id) REFERENCES ${COURSE_TOPIC_TABLE}(topic_id)
+      ON DELETE CASCADE,
+    CONSTRAINT fk_topic_attendance_course
+      FOREIGN KEY (course_id) REFERENCES courses(course_id)
+      ON DELETE CASCADE
+  )`,
+  (err) => {
+    if (err) console.error("Failed to ensure course_topic_attendance table:", err.message);
+  }
+);
+
+app.get("/api/courses/:courseId/topics", (req, res) => {
+  const courseId = Number(req.params.courseId);
+  if (!Number.isInteger(courseId) || courseId <= 0) {
+    return res.status(400).json({ error: "Valid courseId is required" });
+  }
+
+  getCourseColumns((metaErr, courseMeta) => {
+    if (metaErr) {
+      console.error(metaErr);
+      return res.status(500).json({ error: "Failed to load courses schema" });
+    }
+
+    const currentStudentId =
+      req.session &&
+      req.session.userSource !== "teacher" &&
+      Number.isInteger(Number(req.session.userId))
+        ? Number(req.session.userId)
+        : null;
+    const attendanceJoin = currentStudentId
+      ? `LEFT JOIN ${COURSE_TOPIC_ATTENDANCE_TABLE} a
+           ON a.topic_id = t.topic_id AND a.auth_user_id = ${db.escape(currentStudentId)}`
+      : "";
+
+    db.query(
+      `SELECT t.topic_id, t.course_id, c.${courseMeta.nameCol} AS course_name,
+              t.topic_name, t.topic_order, t.video_path,
+              ${currentStudentId ? "a.marked_at AS attendance_marked_at" : "NULL AS attendance_marked_at"}
+       FROM ${COURSE_TOPIC_TABLE} t
+       JOIN courses c ON c.${courseMeta.idCol} = t.course_id
+       ${attendanceJoin}
+       WHERE t.course_id = ?
+       ORDER BY t.topic_order ASC, t.topic_id ASC`,
+      [courseId],
+      (err, rows) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Failed to load course topics" });
+        }
+
+        const topics = (rows || []).map((topic) => ({
+          ...topic,
+          attendance_marked: !!topic.attendance_marked_at,
+          page_path: buildUploadedCoursePagePath(
+            topic.course_id,
+            topic.course_name,
+            topic.topic_id,
+            topic.video_path
+          )
+        }));
+
+        return res.json({ topics });
+      }
+    );
+  });
+});
+
+app.post("/api/topics/:topicId/attendance", (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Please log in first" });
+  }
+
+  if (req.session.userSource === "teacher") {
+    return res.status(403).json({ error: "Teachers cannot mark student attendance" });
+  }
+
+  const topicId = Number(req.params.topicId);
+  if (!Number.isInteger(topicId) || topicId <= 0) {
+    return res.status(400).json({ error: "Valid topicId is required" });
+  }
+
+  getEnrollmentCourseColumn((metaErr, enrollmentCourseCol) => {
+    if (metaErr) {
+      console.error(metaErr);
+      return res.status(500).json({ error: "Failed to load enrollment schema" });
+    }
+
+    db.query("SHOW COLUMNS FROM enrollment", (enrollMetaErr, enrollMetaRows) => {
+      if (enrollMetaErr) {
+        console.error(enrollMetaErr);
+        return res.status(500).json({ error: "Failed to inspect enrollment schema" });
+      }
+
+      const enrollFields = new Set((enrollMetaRows || []).map((row) => row.Field));
+      const enrollmentUserCol = enrollFields.has("auth_user_id")
+        ? "auth_user_id"
+        : enrollFields.has("user_id")
+          ? "user_id"
+          : enrollFields.has("student_id")
+            ? "student_id"
+            : "auth_user_id";
+
+      db.query(
+        `SELECT topic_id, course_id, topic_name
+         FROM ${COURSE_TOPIC_TABLE}
+         WHERE topic_id = ?
+         LIMIT 1`,
+        [topicId],
+        (findErr, topicRows) => {
+          if (findErr) {
+            console.error(findErr);
+            return res.status(500).json({ error: "Failed to load topic" });
+          }
+
+          if (!topicRows || topicRows.length === 0) {
+            return res.status(404).json({ error: "Topic not found" });
+          }
+
+          const topic = topicRows[0];
+          db.query(
+            `SELECT 1
+             FROM enrollment
+             WHERE ${enrollmentUserCol} = ? AND ${enrollmentCourseCol} = ?
+             LIMIT 1`,
+            [req.session.userId, topic.course_id],
+            (enrollErr, enrollRows) => {
+              if (enrollErr) {
+                console.error(enrollErr);
+                return res.status(500).json({ error: "Failed to verify course enrollment" });
+              }
+
+              if (!enrollRows || enrollRows.length === 0) {
+                return res.status(403).json({ error: "Enroll in this course before marking attendance" });
+              }
+
+              db.query(
+                `INSERT INTO ${COURSE_TOPIC_ATTENDANCE_TABLE} (topic_id, course_id, auth_user_id)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE marked_at = marked_at`,
+                [topic.topic_id, topic.course_id, req.session.userId],
+                (insertErr, result) => {
+                  if (insertErr) {
+                    console.error(insertErr);
+                    return res.status(500).json({ error: "Failed to mark attendance" });
+                  }
+
+                  return res.json({
+                    message:
+                      result && result.affectedRows === 1
+                        ? "Attendance marked successfully"
+                        : "Attendance was already marked for this topic",
+                    topicId: topic.topic_id,
+                    courseId: topic.course_id,
+                    topicName: topic.topic_name,
+                    alreadyMarked: !!(result && result.affectedRows !== 1)
+                  });
+                }
+              );
+            }
+          );
+        }
+      );
+    });
+  });
+});
 
 app.post("/api/teacher/upload-video", (req, res) => {
   if (!req.session.userId) {
@@ -187,10 +481,18 @@ app.post("/api/teacher/upload-video", (req, res) => {
     }
 
     const courseName = req.body && req.body.courseName ? String(req.body.courseName).trim() : "";
+    const topicName = req.body && req.body.topicName ? String(req.body.topicName).trim() : "";
+    const rawTopicOrder = req.body && req.body.topicOrder ? String(req.body.topicOrder).trim() : "";
+    const parsedTopicOrder = Number.parseInt(rawTopicOrder || "1", 10);
+    const topicOrder = Number.isInteger(parsedTopicOrder) && parsedTopicOrder > 0 ? parsedTopicOrder : 1;
     const coursePeriod =
       req.body && req.body.coursePeriod ? String(req.body.coursePeriod).trim() : "";
     if (!courseName) {
       return res.status(400).json({ error: "courseName is required" });
+    }
+
+    if (!topicName) {
+      return res.status(400).json({ error: "topicName is required" });
     }
 
     if (!coursePeriod) {
@@ -202,7 +504,6 @@ app.post("/api/teacher/upload-video", (req, res) => {
     }
 
     const filePath = `/uploads/${req.file.filename}`;
-    const coursePagePath = buildUploadedCoursePagePath(courseName, filePath);
     const teacherId = req.session.user && req.session.user.id ? Number(req.session.user.id) : null;
     const teacherDeptId =
       req.session.user && req.session.user.dept_id ? Number(req.session.user.dept_id) : null;
@@ -213,7 +514,80 @@ app.post("/api/teacher/upload-video", (req, res) => {
         return res.status(500).json({ error: "Failed to load courses schema" });
       }
 
-      const { idCol, nameCol, creditsCol, periodCol, deptCol, teacherCol, videoCol } = courseMeta;
+      const { idCol, nameCol, creditsCol, periodCol, deptCol, teacherCol, videoCol, idAutoIncrement } = courseMeta;
+
+      const saveTopicAndRespond = (courseId) => {
+        db.query(
+          `SELECT topic_id, video_path
+           FROM ${COURSE_TOPIC_TABLE}
+           WHERE course_id = ? AND topic_name = ?
+           LIMIT 1`,
+          [courseId, topicName],
+          (topicFindErr, topicRows) => {
+            if (topicFindErr) {
+              console.error(topicFindErr);
+              return res.status(500).json({ error: "Video uploaded but topic save failed" });
+            }
+
+            if (topicRows && topicRows.length > 0) {
+              const existingTopic = topicRows[0];
+              db.query(
+                `UPDATE ${COURSE_TOPIC_TABLE}
+                 SET topic_order = ?, video_path = ?
+                 WHERE topic_id = ?`,
+                [topicOrder, filePath, existingTopic.topic_id],
+                (topicUpdateErr) => {
+                  if (topicUpdateErr) {
+                    console.error(topicUpdateErr);
+                    return res.status(500).json({ error: "Video uploaded but topic update failed" });
+                  }
+
+                  if (existingTopic.video_path && existingTopic.video_path !== filePath) {
+                    removeUploadedFile(existingTopic.video_path);
+                  }
+
+                  return res.json({
+                    message: "Topic uploaded successfully",
+                    filePath,
+                    coursePagePath: buildUploadedCoursePagePath(courseId, courseName, existingTopic.topic_id, filePath),
+                    courseName,
+                    coursePeriod,
+                    courseId,
+                    topicId: existingTopic.topic_id,
+                    topicName,
+                    topicOrder
+                  });
+                }
+              );
+              return;
+            }
+
+            db.query(
+              `INSERT INTO ${COURSE_TOPIC_TABLE} (course_id, topic_name, topic_order, video_path)
+               VALUES (?, ?, ?, ?)`,
+              [courseId, topicName, topicOrder, filePath],
+              (topicInsertErr, topicInsertResult) => {
+                if (topicInsertErr) {
+                  console.error(topicInsertErr);
+                  return res.status(500).json({ error: "Video uploaded but topic creation failed" });
+                }
+
+                return res.json({
+                  message: "Topic uploaded successfully",
+                  filePath,
+                  coursePagePath: buildUploadedCoursePagePath(courseId, courseName, topicInsertResult.insertId, filePath),
+                  courseName,
+                  coursePeriod,
+                  courseId,
+                  topicId: topicInsertResult.insertId,
+                  topicName,
+                  topicOrder
+                });
+              }
+            );
+          }
+        );
+      };
 
       db.query(
         `SELECT ${idCol} AS course_id FROM courses WHERE ${nameCol} = ? LIMIT 1`,
@@ -247,14 +621,7 @@ app.post("/api/teacher/upload-video", (req, res) => {
             }
 
             if (updateAssignments.length === 0) {
-              return res.json({
-                message: "Video uploaded successfully",
-                filePath,
-                coursePagePath,
-                courseName,
-                coursePeriod,
-                courseId
-              });
+              return saveTopicAndRespond(courseId);
             }
 
             updateValues.push(courseId);
@@ -267,68 +634,86 @@ app.post("/api/teacher/upload-video", (req, res) => {
                   return res.status(500).json({ error: "Video uploaded but course update failed" });
                 }
 
-                return res.json({
-                  message: "Video uploaded successfully",
-                  filePath,
-                  courseName,
-                  coursePeriod,
-                  courseId
-                });
+                return saveTopicAndRespond(courseId);
               }
             );
             return;
           }
 
-          const insertColumns = [nameCol];
-          const insertValues = [courseName];
-          const placeholders = ["?"];
+          const insertColumns = [];
+          const insertValues = [];
+          const placeholders = [];
 
-          if (creditsCol) {
-            insertColumns.push(creditsCol);
-            insertValues.push(3);
-            placeholders.push("?");
-          }
-          if (deptCol) {
-            insertColumns.push(deptCol);
-            insertValues.push(teacherDeptId);
-            placeholders.push("?");
-          }
-          if (teacherCol) {
-            insertColumns.push(teacherCol);
-            insertValues.push(teacherId);
-            placeholders.push("?");
-          }
-          if (videoCol) {
-            insertColumns.push(videoCol);
-            insertValues.push(filePath);
-            placeholders.push("?");
-          }
-          if (periodCol) {
-            insertColumns.push(periodCol);
-            insertValues.push(coursePeriod);
-            placeholders.push("?");
-          }
-
-          db.query(
-            `INSERT INTO courses (${insertColumns.join(", ")})
-             VALUES (${placeholders.join(", ")})`,
-            insertValues,
-            (insertErr, insertResult) => {
-              if (insertErr) {
-                console.error(insertErr);
-                return res.status(500).json({ error: "Video uploaded but course creation failed" });
-              }
-
-              return res.json({
-                message: "Video uploaded successfully",
-                filePath,
-                coursePagePath,
-                courseName,
-                coursePeriod,
-                courseId: insertResult.insertId
-              });
+          const executeCourseInsert = (explicitCourseId) => {
+            if (idCol && !idAutoIncrement) {
+              insertColumns.push(idCol);
+              insertValues.push(explicitCourseId);
+              placeholders.push("?");
             }
-          );
+
+            insertColumns.push(nameCol);
+            insertValues.push(courseName);
+            placeholders.push("?");
+
+            if (creditsCol) {
+              insertColumns.push(creditsCol);
+              insertValues.push(3);
+              placeholders.push("?");
+            }
+            if (deptCol) {
+              insertColumns.push(deptCol);
+              insertValues.push(teacherDeptId);
+              placeholders.push("?");
+            }
+            if (teacherCol) {
+              insertColumns.push(teacherCol);
+              insertValues.push(teacherId);
+              placeholders.push("?");
+            }
+            if (videoCol) {
+              insertColumns.push(videoCol);
+              insertValues.push(filePath);
+              placeholders.push("?");
+            }
+            if (periodCol) {
+              insertColumns.push(periodCol);
+              insertValues.push(coursePeriod);
+              placeholders.push("?");
+            }
+
+            db.query(
+              `INSERT INTO courses (${insertColumns.join(", ")})
+               VALUES (${placeholders.join(", ")})`,
+              insertValues,
+              (insertErr, insertResult) => {
+                if (insertErr) {
+                  console.error(insertErr);
+                  return res.status(500).json({ error: "Video uploaded but course creation failed" });
+                }
+
+                const createdCourseId = idAutoIncrement ? insertResult.insertId : explicitCourseId;
+                return saveTopicAndRespond(createdCourseId);
+              }
+            );
+          };
+
+          if (!idAutoIncrement && idCol) {
+            db.query(
+              `SELECT COALESCE(MAX(${idCol}), 0) + 1 AS next_course_id FROM courses`,
+              (idErr, idRows) => {
+                if (idErr) {
+                  console.error(idErr);
+                  return res.status(500).json({ error: "Failed to generate course id" });
+                }
+
+                const nextCourseId = Number(idRows && idRows[0] && idRows[0].next_course_id) || 1;
+                return executeCourseInsert(nextCourseId);
+              }
+            );
+            return;
+          }
+
+          return executeCourseInsert(null);
         }
       );
     });
@@ -390,60 +775,66 @@ app.delete("/api/teacher/courses/:courseId", (req, res) => {
           }
 
           db.query(
-            "DELETE FROM enrollment_requests WHERE course_id = ?",
+            `SELECT video_path FROM ${COURSE_TOPIC_TABLE} WHERE course_id = ?`,
             [courseId],
-            (requestErr) => {
-              if (requestErr) {
-                console.error(requestErr);
-                return res.status(500).json({ error: "Failed to remove enrollment requests" });
+            (topicErr, topicRows) => {
+              if (topicErr) {
+                console.error(topicErr);
+                return res.status(500).json({ error: "Failed to load course topics" });
               }
 
+              const topicVideoPaths = (topicRows || []).map((row) => row.video_path);
+
               db.query(
-                "DELETE FROM student_performance WHERE course_id = ?",
+                "DELETE FROM enrollment_requests WHERE course_id = ?",
                 [courseId],
-                (performanceErr) => {
-                  if (performanceErr) {
-                    console.error(performanceErr);
-                    return res.status(500).json({ error: "Failed to remove performance records" });
+                (requestErr) => {
+                  if (requestErr) {
+                    console.error(requestErr);
+                    return res.status(500).json({ error: "Failed to remove enrollment requests" });
                   }
 
                   db.query(
-                    `DELETE FROM enrollment WHERE ${enrollmentCourseCol} = ?`,
+                    "DELETE FROM student_performance WHERE course_id = ?",
                     [courseId],
-                    (enrollErr) => {
-                      if (enrollErr) {
-                        console.error(enrollErr);
-                        return res.status(500).json({ error: "Failed to remove enrollments" });
+                    (performanceErr) => {
+                      if (performanceErr) {
+                        console.error(performanceErr);
+                        return res.status(500).json({ error: "Failed to remove performance records" });
                       }
 
                       db.query(
-                        `DELETE FROM courses WHERE ${idCol} = ?`,
+                        `DELETE FROM enrollment WHERE ${enrollmentCourseCol} = ?`,
                         [courseId],
-                        (deleteErr, result) => {
-                          if (deleteErr) {
-                            console.error(deleteErr);
-                            return res.status(500).json({ error: "Failed to delete course" });
+                        (enrollErr) => {
+                          if (enrollErr) {
+                            console.error(enrollErr);
+                            return res.status(500).json({ error: "Failed to remove enrollments" });
                           }
 
-                          if (!result || result.affectedRows === 0) {
-                            return res.status(404).json({ error: "Course not found or already deleted" });
-                          }
-
-                          const rawVideoPath = String(course.video_path || "").trim();
-                          if (rawVideoPath.startsWith("/uploads/")) {
-                            const absoluteVideoPath = path.join(PUBLIC_DIR, rawVideoPath.replace(/^\//, ""));
-                            fs.unlink(absoluteVideoPath, (unlinkErr) => {
-                              if (unlinkErr && unlinkErr.code !== "ENOENT") {
-                                console.error("Failed to remove uploaded video:", unlinkErr.message);
+                          db.query(
+                            `DELETE FROM courses WHERE ${idCol} = ?`,
+                            [courseId],
+                            (deleteErr, result) => {
+                              if (deleteErr) {
+                                console.error(deleteErr);
+                                return res.status(500).json({ error: "Failed to delete course" });
                               }
-                            });
-                          }
 
-                          return res.json({
-                            message: "Course deleted successfully",
-                            courseId,
-                            courseName: course.course_name
-                          });
+                              if (!result || result.affectedRows === 0) {
+                                return res.status(404).json({ error: "Course not found or already deleted" });
+                              }
+
+                              topicVideoPaths.forEach((videoPath) => removeUploadedFile(videoPath));
+                              removeUploadedFile(course.video_path);
+
+                              return res.json({
+                                message: "Course deleted successfully",
+                                courseId,
+                                courseName: course.course_name
+                              });
+                            }
+                          );
                         }
                       );
                     }

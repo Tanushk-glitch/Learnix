@@ -184,6 +184,48 @@
       margin-bottom: 8px;
     }
 
+    .topics-heading {
+      margin: 0 0 12px;
+      font-size: 1.05rem;
+      color: var(--text);
+    }
+
+    .topics-content {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .topic-item {
+      width: 100%;
+      text-align: left;
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      color: var(--text);
+    }
+
+    .topic-item.active {
+      border-color: rgba(56, 189, 248, 0.55);
+      background: rgba(14, 165, 233, 0.12);
+    }
+
+    .topic-item.attended {
+      border-color: rgba(34, 197, 94, 0.45);
+    }
+
+    .topic-item small {
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .attendance-status.success {
+      color: var(--success);
+    }
+
     .meta {
       display: flex;
       flex-wrap: wrap;
@@ -249,17 +291,26 @@
       </div>
       <div class="actions">
         <a class="back-link" href="/pages/courses.html">Back to Courses</a>
+        <button id="mark-attendance-btn" class="secondary" type="button">Mark Attendance</button>
       </div>
+      <div id="attendance-status" class="status attendance-status"></div>
     </div>
 
     <div class="panel">
-      <h2>Quiz Questions</h2>
-      <div id="questions-content">Questions will appear here after generation.</div>
+      <h2>Course Topics</h2>
+      <div id="topics-content" class="topics-content"></div>
+      <div id="topics-status" class="status"></div>
+      <div id="quiz-section">
+        <h2 class="topics-heading">Quiz Questions</h2>
+        <div id="questions-content">Questions will appear here after generation.</div>
+      </div>
     </div>
   </section>
 
   <script>
     const params = new URLSearchParams(window.location.search);
+    const courseId = Number.parseInt(params.get('courseId') || '', 10);
+    const requestedTopicId = Number.parseInt(params.get('topicId') || '', 10);
     const courseName = String(params.get('course') || 'Uploaded Course').trim();
     const videoUrl = String(params.get('video') || '').trim();
     const isEnrolled = params.get('enrolled') === '1';
@@ -270,18 +321,128 @@
     const videoDescription = document.getElementById('video-description');
     const summaryContent = document.getElementById('summary-content');
     const summaryStatus = document.getElementById('summary-status');
+    const topicsContent = document.getElementById('topics-content');
+    const topicsStatus = document.getElementById('topics-status');
     const questionsContent = document.getElementById('questions-content');
-    const questionsPanel = questionsContent.closest('.panel');
+    const quizSection = document.getElementById('quiz-section');
     const generateBtn = document.getElementById('generate-btn');
+    const attendanceBtn = document.getElementById('mark-attendance-btn');
+    const attendanceStatus = document.getElementById('attendance-status');
     const videoSource = document.getElementById('video-source');
     const videoElement = document.getElementById('course-video');
+    let availableTopics = [];
+    let currentTopic = null;
+    let currentVideoUrl = videoUrl;
 
     titleNode.textContent = courseName;
     subtitleNode.textContent = isEnrolled
-      ? `${courseName} is now available from the courses page with the same side-by-side learning layout as the built-in lessons.`
+      ? `${courseName} is now available topic by topic with the same side-by-side learning layout as the built-in lessons.`
       : `${courseName} preview is available here. Enroll in this specific course to unlock quiz questions.`;
     courseChip.textContent = courseName;
-    videoDescription.textContent = `Watch the ${courseName} lecture, then review the generated summary and practice questions beside it.`;
+    videoDescription.textContent = `Watch the selected ${courseName} topic, then review the generated summary and practice questions beside it.`;
+
+    function updateVideoSource(nextVideoUrl) {
+      currentVideoUrl = String(nextVideoUrl || '').trim();
+      if (!currentVideoUrl) {
+        return false;
+      }
+
+      videoSource.src = currentVideoUrl;
+      videoElement.load();
+      return true;
+    }
+
+    function updateTopicPresentation(topic) {
+      if (!topic) {
+        courseChip.textContent = courseName;
+        videoDescription.textContent = `Watch the ${courseName} lecture, then review the generated summary and practice questions beside it.`;
+        return;
+      }
+
+      const topicLabel = String(topic.topic_name || '').trim();
+      courseChip.textContent = topicLabel ? `${courseName} - ${topicLabel}` : courseName;
+      videoDescription.textContent = topicLabel
+        ? `Watch the "${topicLabel}" topic from ${courseName}, then review the generated summary and practice questions beside it.`
+        : `Watch the ${courseName} lecture, then review the generated summary and practice questions beside it.`;
+    }
+
+    function renderTopicList(topics) {
+      if (!Array.isArray(topics) || topics.length === 0) {
+        topicsContent.innerHTML = '<div>No uploaded topics were found for this course yet.</div>';
+        return;
+      }
+
+      topicsContent.innerHTML = topics.map((topic, index) => `
+        <button
+          type="button"
+          class="topic-item${currentTopic && Number(currentTopic.topic_id) === Number(topic.topic_id) ? ' active' : ''}${topic.attendance_marked ? ' attended' : ''}"
+          data-topic-id="${topic.topic_id}"
+        >
+          <strong>Topic ${topic.topic_order || index + 1}: ${topic.topic_name || 'Untitled Topic'}</strong>
+          <small>${topic.attendance_marked ? 'Attendance marked' : 'Attendance pending'}</small>
+        </button>
+      `).join('');
+    }
+
+    function refreshAttendanceUi() {
+      if (!attendanceBtn) return;
+
+      if (!isEnrolled || !currentTopic || !currentTopic.topic_id) {
+        attendanceBtn.style.display = 'none';
+        attendanceStatus.textContent = '';
+        attendanceStatus.className = 'status attendance-status';
+        return;
+      }
+
+      attendanceBtn.style.display = 'inline-flex';
+      if (currentTopic.attendance_marked) {
+        attendanceBtn.disabled = true;
+        attendanceBtn.textContent = 'Attendance Marked';
+        attendanceStatus.textContent = 'Present for this topic.';
+        attendanceStatus.className = 'status attendance-status success';
+      } else {
+        attendanceBtn.disabled = false;
+        attendanceBtn.textContent = 'Mark Attendance';
+        attendanceStatus.textContent = 'Mark attendance after completing this topic.';
+        attendanceStatus.className = 'status attendance-status';
+      }
+    }
+
+    function syncTopicUrl(topic) {
+      if (!topic) return;
+      const nextParams = new URLSearchParams(window.location.search);
+      nextParams.set('course', courseName);
+      if (Number.isInteger(courseId) && courseId > 0) {
+        nextParams.set('courseId', String(courseId));
+      }
+      if (topic.topic_id) {
+        nextParams.set('topicId', String(topic.topic_id));
+      }
+      if (topic.video_path) {
+        nextParams.set('video', topic.video_path);
+      }
+      if (isEnrolled) {
+        nextParams.set('enrolled', '1');
+      } else {
+        nextParams.delete('enrolled');
+      }
+      window.history.replaceState({}, '', `${window.location.pathname}?${nextParams.toString()}`);
+    }
+
+    async function selectTopic(topic, topics, shouldGenerate = true) {
+      currentTopic = topic || null;
+      updateTopicPresentation(currentTopic);
+      if (currentTopic && currentTopic.video_path) {
+        updateVideoSource(currentTopic.video_path);
+        syncTopicUrl(currentTopic);
+      }
+      availableTopics = Array.isArray(topics) ? topics : availableTopics;
+      renderTopicList(availableTopics);
+      refreshAttendanceUi();
+      if (shouldGenerate && currentVideoUrl) {
+        await generateSummary();
+      }
+    }
 
     if (!videoUrl) {
       summaryContent.textContent = 'No video source was provided for this uploaded course.';
@@ -289,14 +450,14 @@
       summaryStatus.className = 'status error';
       generateBtn.disabled = true;
     } else {
-      videoSource.src = videoUrl;
-      videoElement.load();
+      updateVideoSource(videoUrl);
     }
 
-    if (!isEnrolled && questionsPanel) {
-      questionsPanel.style.display = 'none';
+    if (!isEnrolled && quizSection) {
+      quizSection.style.display = 'none';
       questionsContent.textContent = 'Quiz questions unlock after enrollment.';
     }
+    refreshAttendanceUi();
 
     function renderQuestions(questions) {
       if (!isEnrolled) {
@@ -318,7 +479,10 @@
     }
 
     async function generateSummary() {
-      if (!videoUrl) return;
+      if (!currentVideoUrl) return;
+      const selectedTopicName = currentTopic && currentTopic.topic_name
+        ? `${courseName} - ${currentTopic.topic_name}`
+        : courseName;
 
       summaryStatus.textContent = isEnrolled
         ? 'Generating summary and questions...'
@@ -335,8 +499,8 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            courseName,
-            videoUrl,
+            courseName: selectedTopicName,
+            videoUrl: currentVideoUrl,
             maxQuestions: 5
           })
         });
@@ -360,9 +524,98 @@
     }
 
     generateBtn.addEventListener('click', generateSummary);
+    attendanceBtn.addEventListener('click', async () => {
+      if (!currentTopic || !currentTopic.topic_id || currentTopic.attendance_marked) return;
 
-    if (videoUrl) {
-      generateSummary();
+      attendanceBtn.disabled = true;
+      attendanceStatus.textContent = 'Marking attendance...';
+      attendanceStatus.className = 'status attendance-status';
+
+      try {
+        const response = await fetch(`/api/topics/${currentTopic.topic_id}/attendance`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || 'Failed to mark attendance');
+        }
+
+        currentTopic.attendance_marked = true;
+        availableTopics = availableTopics.map((topic) =>
+          Number(topic.topic_id) === Number(currentTopic.topic_id)
+            ? { ...topic, attendance_marked: true }
+            : topic
+        );
+        renderTopicList(availableTopics);
+        refreshAttendanceUi();
+      } catch (err) {
+        attendanceBtn.disabled = false;
+        attendanceStatus.textContent = err.message || 'Failed to mark attendance.';
+        attendanceStatus.className = 'status attendance-status error';
+      }
+    });
+
+    topicsContent.addEventListener('click', async (event) => {
+      const topicButton = event.target.closest('.topic-item');
+      if (!topicButton) return;
+
+      const topicId = Number.parseInt(topicButton.dataset.topicId || '', 10);
+      const selectedTopic = availableTopics.find((topic) => Number(topic.topic_id) === topicId);
+      if (!selectedTopic) return;
+      await selectTopic(selectedTopic, availableTopics);
+    });
+
+    async function loadTopics() {
+      if (!Number.isInteger(courseId) || courseId <= 0) {
+        if (currentVideoUrl) {
+          topicsStatus.textContent = 'Legacy uploaded course link detected. Topic list is unavailable for this older upload.';
+          renderTopicList([]);
+          await generateSummary();
+        }
+        return;
+      }
+
+      topicsStatus.textContent = 'Loading course topics...';
+      topicsStatus.className = 'status';
+      try {
+        const response = await fetch(`/api/courses/${courseId}/topics`);
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || 'Failed to load topics');
+        }
+
+        const topics = Array.isArray(payload.topics) ? payload.topics : [];
+        availableTopics = topics;
+        if (topics.length === 0) {
+          topicsStatus.textContent = 'No topics have been uploaded for this course yet.';
+          topicsStatus.className = 'status';
+          renderTopicList([]);
+          if (currentVideoUrl) {
+            await generateSummary();
+          }
+          return;
+        }
+
+        topicsStatus.textContent = `${topics.length} topic${topics.length === 1 ? '' : 's'} available.`;
+        topicsStatus.className = 'status';
+        const selectedTopic =
+          topics.find((topic) => Number(topic.topic_id) === requestedTopicId) ||
+          topics.find((topic) => String(topic.video_path || '').trim() === currentVideoUrl) ||
+          topics[0];
+
+        await selectTopic(selectedTopic, topics, true);
+      } catch (err) {
+        topicsStatus.textContent = err.message || 'Failed to load topics.';
+        topicsStatus.className = 'status error';
+        if (currentVideoUrl) {
+          await generateSummary();
+        }
+      }
+    }
+
+    if (currentVideoUrl || (Number.isInteger(courseId) && courseId > 0)) {
+      loadTopics();
     }
   </script>
 </body>
