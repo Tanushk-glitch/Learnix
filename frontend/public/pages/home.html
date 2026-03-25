@@ -215,6 +215,16 @@ fetch('/api/me', { credentials: 'same-origin' })
       return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
     }
 
+    function buildEnrolledCourseHref(videoPath) {
+      const normalizedPath = String(videoPath || '').trim();
+      if (!normalizedPath || normalizedPath === '/pages/courses.html' || normalizedPath === '/courses.html') {
+        return '/pages/courses.html';
+      }
+
+      const separator = normalizedPath.includes('?') ? '&' : '?';
+      return `${normalizedPath}${separator}enrolled=1`;
+    }
+
     async function openMyCoursesPanel() {
       panelGrid.innerHTML = '<p>Loading enrolled courses...</p>';
       panel.classList.add('open');
@@ -232,9 +242,7 @@ fetch('/api/me', { credentials: 'same-origin' })
         }
 
         if (courses.length === 1) {
-          const videoPath = courses[0].video_path || '/pages/courses.html';
-          const separator = videoPath.includes('?') ? '&' : '?';
-          window.location.href = `${videoPath}${separator}enrolled=1`;
+          window.location.href = buildEnrolledCourseHref(courses[0].video_path);
           return;
         }
 
@@ -245,7 +253,7 @@ fetch('/api/me', { credentials: 'same-origin' })
             <p><strong>Department:</strong> ${course.dept_name || 'N/A'}</p>
             <p><strong>Teacher:</strong> ${course.teacher_name || 'N/A'}</p>
             <p><strong>Enrolled On:</strong> ${formatDate(course.enrollment_date)}</p>
-            <a class="course-open-btn" href="${course.video_path || '/pages/courses.html'}?enrolled=1">Open Course</a>
+            <a class="course-open-btn" href="${buildEnrolledCourseHref(course.video_path)}">Open Course</a>
           </article>
         `).join('');
         panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
