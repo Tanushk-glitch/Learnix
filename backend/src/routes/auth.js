@@ -9,6 +9,8 @@ const AUTH_TABLE = "auth_users";
 const TEACHER_TABLE = "teacher";
 const DEPT_TABLE = "dept";
 const COURSE_TABLE = "courses";
+const COURSE_TOPIC_TABLE = "course_topics";
+const COURSE_TOPIC_ATTENDANCE_TABLE = "course_topic_attendance";
 const ENROLL_TABLE = "enrollment";
 const ENROLL_REQUEST_TABLE = "enrollment_requests";
 const PERFORMANCE_TABLE = "student_performance";
@@ -73,21 +75,26 @@ const normalizeLegacyPagePath = (inputPath) => {
   return LEGACY_PAGE_PATH_MAP[canonical] || raw;
 };
 
-const buildUploadedCoursePagePath = (courseName, uploadedVideoPath) => {
+const buildUploadedCoursePagePath = (courseId, courseName, uploadedVideoPath) => {
   const normalizedVideoPath = String(uploadedVideoPath || "").trim();
-  if (!normalizedVideoPath) return "";
+  const normalizedCourseId = Number(courseId);
 
   const params = new URLSearchParams({
-    course: String(courseName || "").trim() || "Uploaded Course",
-    video: normalizedVideoPath
+    course: String(courseName || "").trim() || "Uploaded Course"
   });
+  if (Number.isInteger(normalizedCourseId) && normalizedCourseId > 0) {
+    params.set("courseId", String(normalizedCourseId));
+  }
+  if (normalizedVideoPath) {
+    params.set("video", normalizedVideoPath);
+  }
   return `/pages/uploaded-course.html?${params.toString()}`;
 };
 
-const resolveCourseVideoPath = (courseName, uploadedVideoPath) => {
+const resolveCourseVideoPath = (courseId, courseName, uploadedVideoPath) => {
   const normalizedUploadedPath = normalizeLegacyPagePath(uploadedVideoPath);
   if (normalizedUploadedPath.startsWith("/uploads/")) {
-    return buildUploadedCoursePagePath(courseName, normalizedUploadedPath);
+    return buildUploadedCoursePagePath(courseId, courseName, normalizedUploadedPath);
   }
 
   return normalizedUploadedPath ||
@@ -835,6 +842,174 @@ const resolvePerformanceMetrics = ({ row, userId, courseName }) => {
   };
 };
 
+const roundAttendancePct = (attendedCount, topicCount) => {
+  if (!Number.isFinite(attendedCount) || !Number.isFinite(topicCount) || topicCount <= 0) return null;
+  return Math.round((attendedCount / topicCount) * 1000) / 10;
+};
+
+const buildTopicAttendanceLabel = (attendedCount, topicCount) => {
+  if (!Number.isFinite(topicCount) || topicCount <= 0) return null;
+  const safeAttended = Number.isFinite(attendedCount) ? attendedCount : 0;
+  return `${safeAttended} / ${topicCount} topics attended`;
+};
+
+const loadStudentTopicAttendanceByCourses = (studentId, courseIds, callback) => {
+  const uniqueCourseIds = Array.from(
+    new Set((courseIds || []).map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0))
+  );
+  if (!Number.isInteger(Number(studentId)) || uniqueCourseIds.length === 0) {
+    return callback(null, new Map());
+  }
+
+  db.query(
+    `SELECT course_id, topic_id, topic_name, topic_order
+     FROM ${COURSE_TOPIC_TABLE}
+     WHERE course_id IN (?)
+     ORDER BY course_id ASC, topic_order ASC, topic_id ASC`,
+    [uniqueCourseIds],
+    (topicErr, topicRows) => {
+      if (topicErr) return callback(topicErr);
+
+      db.query(
+        `SELECT course_id, topic_id, marked_at
+         FROM ${COURSE_TOPIC_ATTENDANCE_TABLE}
+         WHERE auth_user_id = ? AND course_id IN (?)`,
+        [studentId, uniqueCourseIds],
+        (attendanceErr, attendanceRows) => {
+          if (attendanceErr) return callback(attendanceErr);
+
+          const markedTopicIdsByCourse = new Map();
+          (attendanceRows || []).forEach((row) => {
+            const courseId = Number(row.course_id);
+            const topicId = Number(row.topic_id);
+            if (!markedTopicIdsByCourse.has(courseId)) {
+              markedTopicIdsByCourse.set(courseId, new Set());
+            }
+            markedTopicIdsByCourse.get(courseId).add(topicId);
+          });
+
+          const topicSummaryByCourse = new Map();
+          (topicRows || []).forEach((row) => {
+            const courseId = Number(row.course_id);
+            const topicId = Number(row.topic_id);
+            if (!topicSummaryByCourse.has(courseId)) {
+              topicSummaryByCourse.set(courseId, {
+                topic_count: 0,
+                attended_topic_count: 0,
+                topic_breakdown: []
+              });
+            }
+
+            const summary = topicSummaryByCourse.get(courseId);
+            const attended = !!(
+              markedTopicIdsByCourse.has(courseId) &&
+              markedTopicIdsByCourse.get(courseId).has(topicId)
+            );
+
+            summary.topic_count += 1;
+            if (attended) summary.attended_topic_count += 1;
+            summary.topic_breakdown.push({
+              topic_id: topicId,
+              topic_name: row.topic_name,
+              topic_order: row.topic_order,
+              attended
+            });
+          });
+
+          topicSummaryByCourse.forEach((summary) => {
+            summary.attendance_pct = roundAttendancePct(summary.attended_topic_count, summary.topic_count);
+            summary.topic_attendance_text = buildTopicAttendanceLabel(
+              summary.attended_topic_count,
+              summary.topic_count
+            );
+          });
+
+          return callback(null, topicSummaryByCourse);
+        }
+      );
+    }
+  );
+};
+
+const loadTopicAttendanceForStudentCoursePairs = (pairs, callback) => {
+  const normalizedPairs = (pairs || [])
+    .map((pair) => ({
+      studentId: Number(pair.studentId),
+      courseId: Number(pair.courseId)
+    }))
+    .filter((pair) => Number.isInteger(pair.studentId) && pair.studentId > 0 && Number.isInteger(pair.courseId) && pair.courseId > 0);
+
+  if (normalizedPairs.length === 0) {
+    return callback(null, new Map());
+  }
+
+  const uniqueCourseIds = Array.from(new Set(normalizedPairs.map((pair) => pair.courseId)));
+  const uniqueStudentIds = Array.from(new Set(normalizedPairs.map((pair) => pair.studentId)));
+
+  db.query(
+    `SELECT course_id, topic_id, topic_name, topic_order
+     FROM ${COURSE_TOPIC_TABLE}
+     WHERE course_id IN (?)
+     ORDER BY course_id ASC, topic_order ASC, topic_id ASC`,
+    [uniqueCourseIds],
+    (topicErr, topicRows) => {
+      if (topicErr) return callback(topicErr);
+
+      db.query(
+        `SELECT auth_user_id, course_id, topic_id
+         FROM ${COURSE_TOPIC_ATTENDANCE_TABLE}
+         WHERE auth_user_id IN (?) AND course_id IN (?)`,
+        [uniqueStudentIds, uniqueCourseIds],
+        (attendanceErr, attendanceRows) => {
+          if (attendanceErr) return callback(attendanceErr);
+
+          const topicsByCourse = new Map();
+          (topicRows || []).forEach((row) => {
+            const courseId = Number(row.course_id);
+            if (!topicsByCourse.has(courseId)) {
+              topicsByCourse.set(courseId, []);
+            }
+            topicsByCourse.get(courseId).push({
+              topic_id: Number(row.topic_id),
+              topic_name: row.topic_name,
+              topic_order: row.topic_order
+            });
+          });
+
+          const markedTopicIdsByPair = new Map();
+          (attendanceRows || []).forEach((row) => {
+            const pairKey = `${Number(row.auth_user_id)}:${Number(row.course_id)}`;
+            if (!markedTopicIdsByPair.has(pairKey)) {
+              markedTopicIdsByPair.set(pairKey, new Set());
+            }
+            markedTopicIdsByPair.get(pairKey).add(Number(row.topic_id));
+          });
+
+          const summaryByPair = new Map();
+          normalizedPairs.forEach((pair) => {
+            const pairKey = `${pair.studentId}:${pair.courseId}`;
+            const courseTopics = topicsByCourse.get(pair.courseId) || [];
+            const attendedTopics = markedTopicIdsByPair.get(pairKey) || new Set();
+            const attendedTopicCount = courseTopics.filter((topic) => attendedTopics.has(topic.topic_id)).length;
+            summaryByPair.set(pairKey, {
+              topic_count: courseTopics.length,
+              attended_topic_count: attendedTopicCount,
+              attendance_pct: roundAttendancePct(attendedTopicCount, courseTopics.length),
+              topic_attendance_text: buildTopicAttendanceLabel(attendedTopicCount, courseTopics.length),
+              topic_breakdown: courseTopics.map((topic) => ({
+                ...topic,
+                attended: attendedTopics.has(topic.topic_id)
+              }))
+            });
+          });
+
+          return callback(null, summaryByPair);
+        }
+      );
+    }
+  );
+};
+
 const hasSmtpConfig = () =>
   !!(
     process.env.EMAIL_SMTP_HOST &&
@@ -1273,7 +1448,7 @@ router.get("/api/my-courses", (req, res) => {
 
             const courses = (rows || []).map((course) => ({
               ...course,
-              video_path: resolveCourseVideoPath(course.course_name, course.video_path)
+              video_path: resolveCourseVideoPath(course.course_id, course.course_name, course.video_path)
             }));
 
             return res.json({ courses });
@@ -1349,36 +1524,53 @@ router.get("/api/student-performance", (req, res) => {
               return res.status(500).json({ error: "Failed to load performance data" });
             }
 
-            const performance = (rows || []).map((row) => {
-              const metrics = resolvePerformanceMetrics({
-                row,
-                userId: row.student_id || req.session.userId,
-                courseName: row.course_name
-              });
-
-              let focusNote = row.focus_area ? String(row.focus_area) : "";
-              if (!focusNote) {
-                if (metrics.score !== null && metrics.score < 60) {
-                  focusNote = `Focus more on ${row.course_name} fundamentals.`;
-                } else if (metrics.attendance !== null && metrics.attendance < 75) {
-                  focusNote = `Increase attendance in ${row.course_name}.`;
-                } else {
-                  focusNote = `Maintain progress in ${row.course_name}.`;
-                }
+            const courseIds = (rows || []).map((row) => row.course_id);
+            loadStudentTopicAttendanceByCourses(req.session.userId, courseIds, (topicErr, topicSummaryByCourse) => {
+              if (topicErr) {
+                console.error(topicErr);
+                return res.status(500).json({ error: "Failed to load topic attendance" });
               }
 
-              return {
-                course_name: row.course_name,
-                attendance_pct: metrics.attendance,
-                marks_obtained: metrics.marksObtained,
-                marks_total: metrics.marksTotal,
-                score_pct: metrics.score,
-                focus_area: focusNote,
-                updated_at: row.updated_at
-              };
-            });
+              const performance = (rows || []).map((row) => {
+                const metrics = resolvePerformanceMetrics({
+                  row,
+                  userId: row.student_id || req.session.userId,
+                  courseName: row.course_name
+                });
+                const topicSummary = topicSummaryByCourse.get(Number(row.course_id));
+                if (topicSummary && Number.isFinite(topicSummary.attendance_pct)) {
+                  metrics.attendance = topicSummary.attendance_pct;
+                }
 
-            return res.json({ performance });
+                let focusNote = row.focus_area ? String(row.focus_area) : "";
+                if (!focusNote) {
+                  if (metrics.score !== null && metrics.score < 60) {
+                    focusNote = `Focus more on ${row.course_name} fundamentals.`;
+                  } else if (metrics.attendance !== null && metrics.attendance < 75) {
+                    focusNote = `Increase attendance in ${row.course_name}.`;
+                  } else {
+                    focusNote = `Maintain progress in ${row.course_name}.`;
+                  }
+                }
+
+                return {
+                  course_id: row.course_id,
+                  course_name: row.course_name,
+                  attendance_pct: metrics.attendance,
+                  attended_topic_count: topicSummary ? topicSummary.attended_topic_count : null,
+                  topic_count: topicSummary ? topicSummary.topic_count : null,
+                  topic_attendance_text: topicSummary ? topicSummary.topic_attendance_text : null,
+                  topic_breakdown: topicSummary ? topicSummary.topic_breakdown : [],
+                  marks_obtained: metrics.marksObtained,
+                  marks_total: metrics.marksTotal,
+                  score_pct: metrics.score,
+                  focus_area: focusNote,
+                  updated_at: row.updated_at
+                };
+              });
+
+              return res.json({ performance });
+            });
           }
         );
       };
@@ -1490,6 +1682,7 @@ router.get("/api/teacher/students-performance", (req, res) => {
         const whereClauses = ["LOWER(COALESCE(u.role, 'student')) = 'student'"];
         db.query(
           `SELECT u.id AS student_id, u.username AS student_name, u.email AS student_email,
+                  c.${idCol} AS course_id,
                   c.${nameCol} AS course_name, ${attendanceSelect}, ${marksObtainedSelect},
                   ${marksTotalSelect}, ${focusSelect}, ${updatedSelect}
            FROM ${ENROLL_TABLE} e
@@ -1509,52 +1702,74 @@ router.get("/api/teacher/students-performance", (req, res) => {
               return res.status(500).json({ error: "Failed to load student performance data" });
             }
 
-            const students = (rows || []).map((row) => {
-            const metrics = resolvePerformanceMetrics({
-              row,
-              userId: row.student_id,
-              courseName: row.course_name
-            });
+            const pairs = (rows || []).map((row) => ({
+              studentId: row.student_id,
+              courseId: row.course_id
+            }));
 
-              return {
-                student_id: row.student_id,
-                student_name: row.student_name,
-                student_email: row.student_email,
-                course_name: row.course_name,
-                attendance_pct: metrics.attendance,
-                marks_obtained: metrics.marksObtained,
-                marks_total: metrics.marksTotal,
-                score_pct: metrics.score,
-                focus_area: row.focus_area || null,
-                updated_at: row.updated_at
-              };
-            });
+            loadTopicAttendanceForStudentCoursePairs(pairs, (topicErr, topicSummaryByPair) => {
+              if (topicErr) {
+                console.error(topicErr);
+                return res.status(500).json({ error: "Failed to load topic attendance" });
+              }
 
-            const uniqueStudents = new Set(students.map((s) => s.student_id)).size;
-            const attendanceValues = students
-              .map((s) => s.attendance_pct)
-              .filter((v) => Number.isFinite(v));
-            const scoreValues = students
-              .map((s) => s.score_pct)
-              .filter((v) => Number.isFinite(v));
+              const students = (rows || []).map((row) => {
+                const metrics = resolvePerformanceMetrics({
+                  row,
+                  userId: row.student_id,
+                  courseName: row.course_name
+                });
+                const pairKey = `${Number(row.student_id)}:${Number(row.course_id)}`;
+                const topicSummary = topicSummaryByPair.get(pairKey);
+                if (topicSummary && Number.isFinite(topicSummary.attendance_pct)) {
+                  metrics.attendance = topicSummary.attendance_pct;
+                }
 
-            const avgAttendance = attendanceValues.length
-              ? Math.round(
-                  (attendanceValues.reduce((sum, v) => sum + v, 0) / attendanceValues.length) * 10
-                ) / 10
-              : null;
-            const avgScore = scoreValues.length
-              ? Math.round((scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length) * 10) /
-                10
-              : null;
+                return {
+                  student_id: row.student_id,
+                  course_id: row.course_id,
+                  student_name: row.student_name,
+                  student_email: row.student_email,
+                  course_name: row.course_name,
+                  attendance_pct: metrics.attendance,
+                  attended_topic_count: topicSummary ? topicSummary.attended_topic_count : null,
+                  topic_count: topicSummary ? topicSummary.topic_count : null,
+                  topic_attendance_text: topicSummary ? topicSummary.topic_attendance_text : null,
+                  topic_breakdown: topicSummary ? topicSummary.topic_breakdown : [],
+                  marks_obtained: metrics.marksObtained,
+                  marks_total: metrics.marksTotal,
+                  score_pct: metrics.score,
+                  focus_area: row.focus_area || null,
+                  updated_at: row.updated_at
+                };
+              });
 
-            return res.json({
-              summary: {
-                student_count: uniqueStudents,
-                avg_attendance_pct: avgAttendance,
-                avg_score_pct: avgScore
-              },
-              students
+              const uniqueStudents = new Set(students.map((s) => s.student_id)).size;
+              const attendanceValues = students
+                .map((s) => s.attendance_pct)
+                .filter((v) => Number.isFinite(v));
+              const scoreValues = students
+                .map((s) => s.score_pct)
+                .filter((v) => Number.isFinite(v));
+
+              const avgAttendance = attendanceValues.length
+                ? Math.round(
+                    (attendanceValues.reduce((sum, v) => sum + v, 0) / attendanceValues.length) * 10
+                  ) / 10
+                : null;
+              const avgScore = scoreValues.length
+                ? Math.round((scoreValues.reduce((sum, v) => sum + v, 0) / scoreValues.length) * 10) /
+                  10
+                : null;
+
+              return res.json({
+                summary: {
+                  student_count: uniqueStudents,
+                  avg_attendance_pct: avgAttendance,
+                  avg_score_pct: avgScore
+                },
+                students
+              });
             });
           }
         );
@@ -1591,8 +1806,14 @@ router.get("/api/courses", (req, res) => {
         : `LEFT JOIN ${TEACHER_TABLE} t ON 1 = 0`;
 
       db.query(
-        `SELECT c.${idCol} AS course_id, c.${nameCol} AS course_name, ${creditsSelect}, ${periodSelect}, ${deptSelect}, ${teacherSelect}, ${teacherIdSelect}, ${videoSelect}
+        `SELECT c.${idCol} AS course_id, c.${nameCol} AS course_name, ${creditsSelect}, ${periodSelect}, ${deptSelect}, ${teacherSelect}, ${teacherIdSelect}, ${videoSelect},
+                COALESCE(ct.topic_count, 0) AS topic_count
          FROM ${COURSE_TABLE} c
+         LEFT JOIN (
+           SELECT course_id, COUNT(*) AS topic_count
+           FROM ${COURSE_TOPIC_TABLE}
+           GROUP BY course_id
+         ) ct ON ct.course_id = c.${idCol}
          ${deptJoin}
          ${teacherJoin}
          ORDER BY c.${nameCol} ASC`,
@@ -1606,7 +1827,7 @@ router.get("/api/courses", (req, res) => {
             req.session && req.session.userSource === "teacher" ? Number(req.session.userId) : null;
           const courses = (rows || []).map((course) => ({
             ...course,
-            video_path: resolveCourseVideoPath(course.course_name, course.video_path),
+            video_path: resolveCourseVideoPath(course.course_id, course.course_name, course.video_path),
             can_delete:
               currentTeacherId !== null &&
               (
@@ -1674,7 +1895,7 @@ router.post("/api/enroll", (req, res) => {
             ? ` ORDER BY e.${enrollMeta.dateCol} DESC`
             : "";
           db.query(
-            `SELECT c.${nameCol} AS course_name, ${creditsSelect}, d.${deptMeta.nameCol} AS dept_name, t.name AS teacher_name, ${enrollmentDateSelect}, ${videoSelect}
+            `SELECT c.${idCol} AS course_id, c.${nameCol} AS course_name, ${creditsSelect}, d.${deptMeta.nameCol} AS dept_name, t.name AS teacher_name, ${enrollmentDateSelect}, ${videoSelect}
              FROM ${ENROLL_TABLE} e
              JOIN ${COURSE_TABLE} c ON c.${idCol} = e.${enrollMeta.courseCol}
              ${deptJoin}
@@ -1711,7 +1932,7 @@ router.post("/api/enroll", (req, res) => {
                     enrollment: detailRows[0]
                       ? {
                           ...detailRows[0],
-                          video_path: resolveCourseVideoPath(detailRows[0].course_name, detailRows[0].video_path)
+                          video_path: resolveCourseVideoPath(detailRows[0].course_id, detailRows[0].course_name, detailRows[0].video_path)
                         }
                       : null
                   });
@@ -1759,7 +1980,7 @@ router.post("/api/enroll", (req, res) => {
                       enrollment: detailRows[0]
                         ? {
                             ...detailRows[0],
-                            video_path: resolveCourseVideoPath(detailRows[0].course_name, detailRows[0].video_path)
+                            video_path: resolveCourseVideoPath(detailRows[0].course_id, detailRows[0].course_name, detailRows[0].video_path)
                           }
                         : null
                     });

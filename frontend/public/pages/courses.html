@@ -183,6 +183,16 @@
       background: #e8f1ff;
     }
 
+    .teacher-topic-btn {
+      background: transparent !important;
+      color: var(--primary-blue) !important;
+      border: 2px dashed var(--primary-blue) !important;
+    }
+
+    .teacher-topic-btn:hover {
+      background: #e8f1ff !important;
+    }
+
     .course-card button:disabled {
       cursor: not-allowed;
       opacity: 0.65;
@@ -684,9 +694,11 @@
 
 <div id="teacher-upload-modal" class="teacher-upload-modal">
   <div class="teacher-upload-panel">
-    <h3>Upload Course Video</h3>
-    <p>Teacher upload panel</p>
+    <h3>Upload Course Topic</h3>
+    <p>Add one topic video at a time for the same course. New topics will be grouped under that course for students.</p>
     <input id="teacher-course-name" class="enroll-input" type="text" placeholder="Course Name">
+    <input id="teacher-topic-name" class="enroll-input" type="text" placeholder="Topic Name">
+    <input id="teacher-topic-order" class="enroll-input" type="number" min="1" step="1" placeholder="Topic Order (e.g. 1)">
     <input id="teacher-course-period" class="enroll-input" type="text" placeholder="Course Period (e.g. 8 Weeks)">
     <input id="teacher-video-file" class="enroll-input" type="file" accept="video/*">
     <div class="enroll-actions">
@@ -726,6 +738,8 @@
   const teacherUploadModal = document.getElementById('teacher-upload-modal');
   const teacherDeleteModal = document.getElementById('teacher-delete-modal');
   const teacherCourseName = document.getElementById('teacher-course-name');
+  const teacherTopicName = document.getElementById('teacher-topic-name');
+  const teacherTopicOrder = document.getElementById('teacher-topic-order');
   const teacherCoursePeriod = document.getElementById('teacher-course-period');
   const teacherVideoFile = document.getElementById('teacher-video-file');
   const teacherUploadSubmit = document.getElementById('teacher-upload-submit');
@@ -772,6 +786,12 @@
   function getCoursePeriodLabel(course) {
     const rawPeriod = String(course?.course_period || '').trim();
     return rawPeriod || 'Self-paced';
+  }
+
+  function getTopicCountLabel(course) {
+    const count = Number(course?.topic_count);
+    if (!Number.isInteger(count) || count <= 0) return 'Video';
+    return `${count} Topic${count === 1 ? '' : 's'}`;
   }
 
   function getAllEnrollButtons() {
@@ -855,6 +875,7 @@
     const safeCourseName = String(course.course_name);
     const safeVideoPath = String(course.video_path || '/pages/courses.html');
     const safeCoursePeriod = getCoursePeriodLabel(course);
+    const safeTopicCountLabel = getTopicCountLabel(course);
     const description =
       defaultCourseDescriptions[normalizedName] || 'Teacher-uploaded course content.';
 
@@ -868,8 +889,16 @@
       if (card) {
         const sampleBtn = card.querySelector('.sample-btn');
         if (sampleBtn) sampleBtn.dataset.video = safeVideoPath;
-        const periodNode = card.querySelector('.course-meta span');
+        const periodNode = card.querySelector('.course-meta span:first-child');
         if (periodNode) periodNode.textContent = safeCoursePeriod;
+        const topicNode = card.querySelector('.course-meta span:last-child');
+        if (topicNode) topicNode.textContent = safeTopicCountLabel;
+        const addTopicBtn = card.querySelector('.teacher-topic-btn');
+        if (addTopicBtn) {
+          addTopicBtn.dataset.course = safeCourseName;
+          addTopicBtn.dataset.period = safeCoursePeriod;
+          addTopicBtn.style.display = course.can_delete ? 'block' : 'none';
+        }
         syncTeacherControls(card, course);
       }
       return;
@@ -883,18 +912,21 @@
       <p></p>
       <div class="course-meta">
         <span></span>
-        <span>Video</span>
+        <span></span>
       </div>
       <button class="enroll-now-btn" data-course=""></button>
       <button class="sample-btn" data-video="">Sample Video</button>
+      <button class="teacher-topic-btn" type="button" data-course="" data-period="">Add Topic</button>
     `;
 
     const titleNode = card.querySelector('h3');
     if (titleNode) titleNode.textContent = safeCourseName;
     const descriptionNode = card.querySelector('p');
     if (descriptionNode) descriptionNode.textContent = description;
-    const periodNode = card.querySelector('.course-meta span');
+    const periodNode = card.querySelector('.course-meta span:first-child');
     if (periodNode) periodNode.textContent = safeCoursePeriod;
+    const topicNode = card.querySelector('.course-meta span:last-child');
+    if (topicNode) topicNode.textContent = safeTopicCountLabel;
 
     const enrollBtn = card.querySelector('.enroll-now-btn');
     if (enrollBtn) {
@@ -906,6 +938,13 @@
     const sampleBtn = card.querySelector('.sample-btn');
     if (sampleBtn) {
       sampleBtn.dataset.video = safeVideoPath;
+    }
+
+    const addTopicBtn = card.querySelector('.teacher-topic-btn');
+    if (addTopicBtn) {
+      addTopicBtn.dataset.course = safeCourseName;
+      addTopicBtn.dataset.period = safeCoursePeriod;
+      addTopicBtn.style.display = course.can_delete ? 'block' : 'none';
     }
 
     syncTeacherControls(card, course);
@@ -954,13 +993,31 @@
     enrollModal.classList.remove('open');
   }
 
-  function openTeacherUploadModal() {
+  function openTeacherUploadModal(course = null) {
     teacherUploadStatus.textContent = '';
     teacherUploadStatus.className = 'teacher-upload-status';
+    if (course && course.course_name) {
+      teacherCourseName.value = String(course.course_name || '');
+      teacherCourseName.readOnly = true;
+      teacherCourseName.style.opacity = '0.8';
+      if (course.course_period) {
+        teacherCoursePeriod.value = String(course.course_period || '');
+      }
+    } else {
+      teacherCourseName.value = '';
+      teacherCoursePeriod.value = '';
+      teacherCourseName.readOnly = false;
+      teacherCourseName.style.opacity = '1';
+    }
+    teacherTopicName.value = '';
+    teacherTopicOrder.value = '';
+    teacherVideoFile.value = '';
     teacherUploadModal.classList.add('open');
   }
 
   function closeTeacherUploadModal() {
+    teacherCourseName.readOnly = false;
+    teacherCourseName.style.opacity = '1';
     teacherUploadModal.classList.remove('open');
   }
 
@@ -1203,6 +1260,15 @@
     const sampleBtn = event.target.closest('.sample-btn');
     if (sampleBtn && sampleBtn.dataset.video) {
       window.location.href = sampleBtn.dataset.video;
+      return;
+    }
+
+    const addTopicBtn = event.target.closest('.teacher-topic-btn');
+    if (addTopicBtn) {
+      openTeacherUploadModal({
+        course_name: addTopicBtn.dataset.course,
+        course_period: addTopicBtn.dataset.period
+      });
     }
   });
 
@@ -1212,7 +1278,7 @@
     if (e.target === enrollModal) closeEnrollModal();
   });
 
-  teacherUploadFab.addEventListener('click', openTeacherUploadModal);
+  teacherUploadFab.addEventListener('click', () => openTeacherUploadModal());
   teacherDeleteFab.addEventListener('click', openTeacherDeleteModal);
   teacherUploadCancel.addEventListener('click', closeTeacherUploadModal);
   teacherDeleteClose.addEventListener('click', closeTeacherDeleteModal);
@@ -1235,11 +1301,19 @@
 
   teacherUploadSubmit.addEventListener('click', async () => {
     const courseName = teacherCourseName.value.trim();
+    const topicName = teacherTopicName.value.trim();
+    const topicOrder = teacherTopicOrder.value.trim();
     const coursePeriod = teacherCoursePeriod.value.trim();
     const file = teacherVideoFile.files && teacherVideoFile.files[0];
 
     if (!courseName) {
       teacherUploadStatus.textContent = 'Course name is required.';
+      teacherUploadStatus.className = 'teacher-upload-status error';
+      return;
+    }
+
+    if (!topicName) {
+      teacherUploadStatus.textContent = 'Topic name is required.';
       teacherUploadStatus.className = 'teacher-upload-status error';
       return;
     }
@@ -1257,12 +1331,14 @@
     }
 
     teacherUploadSubmit.disabled = true;
-    teacherUploadStatus.textContent = 'Uploading video...';
+    teacherUploadStatus.textContent = 'Uploading topic video...';
     teacherUploadStatus.className = 'teacher-upload-status';
 
     try {
       const formData = new FormData();
       formData.append('courseName', courseName);
+      formData.append('topicName', topicName);
+      formData.append('topicOrder', topicOrder || '1');
       formData.append('coursePeriod', coursePeriod);
       formData.append('courseVideo', file);
 
@@ -1276,7 +1352,7 @@
         throw new Error(payload.error || 'Upload failed');
       }
 
-      teacherUploadStatus.textContent = `Uploaded: ${payload.filePath}`;
+      teacherUploadStatus.textContent = `Uploaded topic: ${payload.topicName || topicName}`;
       upsertCourseCard({
         course_id: payload.courseId,
         course_name: payload.courseName || courseName,
@@ -1284,9 +1360,12 @@
         course_period: payload.coursePeriod || coursePeriod,
         can_delete: true
       });
+      await loadAndRenderCourses();
       renderTeacherDeleteList();
       refreshEnrollButtonLabels();
       teacherCourseName.value = '';
+      teacherTopicName.value = '';
+      teacherTopicOrder.value = '';
       teacherCoursePeriod.value = '';
       teacherVideoFile.value = '';
       closeTeacherUploadModal();

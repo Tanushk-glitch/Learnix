@@ -131,6 +131,18 @@
       return `${value}${suffix || ""}`;
     }
 
+    function renderTopicBreakdown(topics) {
+      if (!Array.isArray(topics) || topics.length === 0) return "";
+      return `
+        <div class="performance-focus">
+          <span>Topic Attendance</span>
+          <p>${topics.map((topic) =>
+            `${topic.topic_name || "Topic"}: ${topic.attended ? "Present" : "Pending"}`
+          ).join(" | ")}</p>
+        </div>
+      `;
+    }
+
     function renderPerformanceCards(performance) {
       const grid = document.getElementById("performanceGrid");
       if (!performance || performance.length === 0) {
@@ -150,6 +162,7 @@
           item.marks_obtained !== null && item.marks_total !== null
             ? `${item.marks_obtained} / ${item.marks_total}`
             : "N/A";
+        const topicAttendance = item.topic_attendance_text || "No topic attendance yet";
         const focusLabel = item.score_pct !== null && item.score_pct < 60
           ? "Needs Focus"
           : item.attendance_pct !== null && item.attendance_pct < 75
@@ -175,11 +188,16 @@
                 <span class="metric-label">Score</span>
                 <span class="metric-value">${score}</span>
               </div>
+              <div class="metric-row">
+                <span class="metric-label">Topics</span>
+                <span class="metric-value">${topicAttendance}</span>
+              </div>
             </div>
             <div class="performance-focus">
               <span>Focus</span>
               <p>${item.focus_area || "Keep practicing to improve."}</p>
             </div>
+            ${renderTopicBreakdown(item.topic_breakdown)}
           </article>
         `;
       }).join("");
@@ -230,6 +248,7 @@
           item.marks_obtained !== null && item.marks_total !== null
             ? `${item.marks_obtained} / ${item.marks_total}`
             : "N/A";
+        const topicAttendance = item.topic_attendance_text || "No topic attendance yet";
         const focusLabel = item.score_pct !== null && item.score_pct < 60
           ? "Needs Focus"
           : item.attendance_pct !== null && item.attendance_pct < 75
@@ -259,7 +278,12 @@
                 <span class="metric-label">Score</span>
                 <span class="metric-value">${score}</span>
               </div>
+              <div class="metric-row">
+                <span class="metric-label">Topics</span>
+                <span class="metric-value">${topicAttendance}</span>
+              </div>
             </div>
+            ${renderTopicBreakdown(item.topic_breakdown)}
           </article>
         `;
       }).join("");
