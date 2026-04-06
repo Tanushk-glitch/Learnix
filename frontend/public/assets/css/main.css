@@ -592,6 +592,171 @@ body {
     color: #64748b;
 }
 
+.admin-upload-stats {
+    margin: 12px 0;
+    padding: 12px 14px;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    background: #f8fbff;
+}
+
+.admin-dashboard-section {
+    max-width: 1320px;
+}
+
+.admin-quick-nav-wrap {
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
+.admin-quick-nav {
+    position: sticky;
+    top: 14px;
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 8px 24px rgba(37,99,235,0.10);
+    backdrop-filter: blur(10px);
+}
+
+.admin-quick-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 110px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    color: #1d4ed8;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.admin-quick-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(37,99,235,0.12);
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+}
+
+.admin-records {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.admin-record {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.1fr) minmax(260px, 1.2fr) minmax(320px, 1.7fr);
+    gap: 18px;
+    align-items: start;
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: 0 6px 18px rgba(37,99,235,0.08);
+}
+
+.admin-record-main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.admin-identity h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #0f172a;
+}
+
+.admin-identity p {
+    margin: 6px 0 0;
+    font-size: 0.93rem;
+    color: #64748b;
+    word-break: break-word;
+}
+
+.admin-course-pill {
+    display: inline-flex;
+    align-items: center;
+    align-self: start;
+    min-height: 40px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    color: #1e3a8a;
+    font-weight: 700;
+}
+
+.admin-record-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+    gap: 10px 14px;
+    margin: 0;
+    padding: 0;
+}
+
+.admin-record-metrics .metric-row {
+    padding: 12px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #f8fbff;
+}
+
+.admin-record-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.admin-record-notes .performance-focus {
+    margin: 0;
+    padding: 14px 0 0;
+}
+
+@media (max-width: 1100px) {
+    .admin-record {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-record-main {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: start;
+    }
+}
+
+@media (max-width: 700px) {
+    .admin-quick-nav {
+        top: 8px;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .admin-quick-link {
+        flex: 1 1 calc(50% - 10px);
+        min-width: 0;
+    }
+
+    .admin-record-main {
+        flex-direction: column;
+    }
+
+    .admin-record-metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-course-pill {
+        width: 100%;
+        border-radius: 14px;
+    }
+}
+
 .teacher-card-head {
     display: flex;
     justify-content: space-between;
@@ -1160,6 +1325,45 @@ body.dark .teacher-summary-card,
 body.dark .teacher-card {
     background: #0f172a;
     border-color: #334155;
+}
+
+body.dark .admin-upload-stats {
+    background: #111c31;
+    border-color: #334155;
+}
+
+body.dark .admin-record {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+body.dark .admin-quick-nav {
+    background: rgba(15, 23, 42, 0.92);
+    border-color: #334155;
+}
+
+body.dark .admin-identity h3,
+body.dark .admin-course-pill {
+    color: #e2e8f0;
+}
+
+body.dark .admin-identity p {
+    color: #cbd5e1;
+}
+
+body.dark .admin-course-pill,
+body.dark .admin-record-metrics .metric-row {
+    background: #111c31;
+    border-color: #334155;
+}
+
+body.dark .admin-quick-link {
+    background: linear-gradient(135deg, #1e293b, #172554);
+    color: #bfdbfe;
+}
+
+body.dark .admin-quick-link:hover {
+    background: linear-gradient(135deg, #243244, #1d4ed8);
 }
 
 body.dark .teacher-summary-card strong,
