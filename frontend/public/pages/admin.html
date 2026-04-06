@@ -93,6 +93,12 @@
           </select>
         </label>
         <label>
+          <span>Department</span>
+          <select id="adminStudentDepartmentFilter">
+            <option value="all">All Departments</option>
+          </select>
+        </label>
+        <label>
           <span>Student Name</span>
           <input id="adminStudentNameFilter" type="text" placeholder="Type a student name">
         </label>
@@ -332,14 +338,18 @@
 
     function applyStudentFilters() {
       const courseFilter = document.getElementById("adminStudentCourseFilter");
+      const departmentFilter = document.getElementById("adminStudentDepartmentFilter");
       const nameFilter = document.getElementById("adminStudentNameFilter");
       const selectedCourse = courseFilter.value;
+      const selectedDepartment = departmentFilter.value;
       const nameQuery = String(nameFilter.value || "").trim().toLowerCase();
 
       const filtered = studentCache.filter((student) => {
         const matchesCourse = selectedCourse === "all" || student.course_name === selectedCourse;
+        const matchesDepartment =
+          selectedDepartment === "all" || (student.department || "") === selectedDepartment;
         const matchesName = !nameQuery || String(student.student_name || "").toLowerCase().includes(nameQuery);
-        return matchesCourse && matchesName;
+        return matchesCourse && matchesDepartment && matchesName;
       });
 
       renderStudents(filtered);
@@ -389,14 +399,19 @@
         document.getElementById("adminStatus").textContent = "Updated";
 
         const courseFilter = document.getElementById("adminStudentCourseFilter");
+        const departmentFilter = document.getElementById("adminStudentDepartmentFilter");
         const courseNames = Array.from(new Set(courseCache.map((course) => course.course_name).filter(Boolean)));
+        const departmentNames = Array.from(new Set(studentCache.map((student) => student.department).filter(Boolean)));
         courseFilter.innerHTML = `<option value="all">All Courses</option>` +
           courseNames.map((name) => `<option value="${name}">${name}</option>`).join("");
+        departmentFilter.innerHTML = `<option value="all">All Departments</option>` +
+          departmentNames.map((name) => `<option value="${name}">${name}</option>`).join("");
 
         document.getElementById("adminStudentNameFilter").addEventListener("input", applyStudentFilters);
         document.getElementById("adminTeacherNameFilter").addEventListener("input", applyTeacherFilters);
         document.getElementById("adminCourseNameFilter").addEventListener("input", applyCourseFilters);
         courseFilter.addEventListener("change", applyStudentFilters);
+        departmentFilter.addEventListener("change", applyStudentFilters);
 
         applyStudentFilters();
         applyCourseFilters();
