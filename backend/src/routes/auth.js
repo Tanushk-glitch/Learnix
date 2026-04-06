@@ -758,46 +758,6 @@ const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 
 const createOtpCode = () => String(Math.floor(10000 + Math.random() * 90000));
 
-const seededRandom = (seed) => {
-  let h = 2166136261;
-  const str = String(seed || "");
-  for (let i = 0; i < str.length; i += 1) {
-    h ^= str.charCodeAt(i);
-    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
-  }
-  return (h >>> 0) / 4294967295;
-};
-
-const getRandomPerformanceSample = () => {
-  const rTier = Math.random();
-  let attendanceMin = 55;
-  let attendanceMax = 75;
-  let scoreMin = 40;
-  let scoreMax = 60;
-
-  let tier = "Needs Improvement";
-  if (rTier > 0.35 && rTier <= 0.75) {
-    tier = "Good";
-    attendanceMin = 70;
-    attendanceMax = 88;
-    scoreMin = 60;
-    scoreMax = 82;
-  } else if (rTier > 0.75) {
-    tier = "Excellent";
-    attendanceMin = 85;
-    attendanceMax = 98;
-    scoreMin = 82;
-    scoreMax = 98;
-  }
-
-  const attendance = Math.round((attendanceMin + Math.random() * (attendanceMax - attendanceMin)) * 10) / 10;
-  const score = Math.round(scoreMin + Math.random() * (scoreMax - scoreMin));
-  const marksTotal = 100;
-  const marksObtained = Math.round((score / 100) * marksTotal);
-
-  return { attendance, score, marksObtained, marksTotal, tier };
-};
-
 const resolvePerformanceMetrics = ({ row, userId, courseName }) => {
   let attendance = row.attendance_pct !== null ? Number(row.attendance_pct) : null;
   let marksObtained = row.marks_obtained !== null ? Number(row.marks_obtained) : null;
@@ -824,23 +784,13 @@ const resolvePerformanceMetrics = ({ row, userId, courseName }) => {
     marksObtained === 76 &&
     marksTotal === 100;
 
-  let usedRandom = false;
-  if (attendance === null || score === null || isSeededDefault || isUniformDefault) {
-    const sample = getRandomPerformanceSample();
-    const shouldReplace = attendance === null || score === null || isSeededDefault || isUniformDefault;
-    attendance = shouldReplace ? sample.attendance : attendance;
-    marksTotal = shouldReplace ? sample.marksTotal : marksTotal;
-    marksObtained = shouldReplace ? sample.marksObtained : marksObtained;
-    score = shouldReplace ? sample.score : score;
-    usedRandom = true;
-  }
-
   return {
     attendance,
     marksObtained,
     marksTotal,
     score,
-    usedRandom
+    isSeededDefault,
+    isUniformDefault
   };
 };
 
