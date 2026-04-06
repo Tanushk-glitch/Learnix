@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | Learnix</title>
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">
+      <span class="logo-text">Learnix</span>
+    </div>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="/pages/home.html">Home</a></li>
+        <li><a href="/pages/courses.html">Courses</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <a href="/logout" class="get-started">Logout</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="transform-banner">
+        <span>Admin Access</span>
+      </div>
+      <h1>Learnix <span class="journey">Admin</span> Dashboard</h1>
+      <p class="subtitle">View all student attendance, marks, and teacher upload activity in one place.</p>
+    </section>
+
+    <section class="dashboard-section admin-dashboard-section admin-quick-nav-wrap">
+      <div class="admin-quick-nav">
+        <a href="#adminOverviewSection" class="admin-quick-link">Overview</a>
+        <a href="#adminStudentsSection" class="admin-quick-link">Students</a>
+        <a href="#adminCoursesSection" class="admin-quick-link">Courses</a>
+        <a href="#adminTeachersSection" class="admin-quick-link">Teachers</a>
+      </div>
+    </section>
+
+    <section id="adminOverviewSection" class="dashboard-section admin-dashboard-section">
+      <div class="dashboard-header">
+        <div>
+          <span class="dashboard-kicker">Overview</span>
+          <h2>System Summary</h2>
+          <p>Quick totals across students, teachers, courses, and uploaded lectures.</p>
+        </div>
+        <div class="dashboard-badge" id="adminStatus">Loading...</div>
+      </div>
+      <div class="teacher-summary" id="adminSummary">
+        <div class="teacher-summary-card">
+          <span>Total Students</span>
+          <strong id="adminStudentCount">0</strong>
+        </div>
+        <div class="teacher-summary-card">
+          <span>Total Teachers</span>
+          <strong id="adminTeacherCount">0</strong>
+        </div>
+        <div class="teacher-summary-card">
+          <span>Total Courses</span>
+          <strong id="adminCourseCount">0</strong>
+        </div>
+        <div class="teacher-summary-card">
+          <span>Avg Attendance</span>
+          <strong id="adminAttendance">N/A</strong>
+        </div>
+        <div class="teacher-summary-card">
+          <span>Avg Score</span>
+          <strong id="adminScore">N/A</strong>
+        </div>
+        <div class="teacher-summary-card">
+          <span>Uploaded Lectures</span>
+          <strong id="adminLectureCount">0</strong>
+        </div>
+      </div>
+    </section>
+
+    <section id="adminStudentsSection" class="dashboard-section admin-dashboard-section">
+      <div class="dashboard-header">
+        <div>
+          <span class="dashboard-kicker">Students</span>
+          <h2>Student Performance</h2>
+          <p>See each student's marks, topic attendance, and enrolled course.</p>
+        </div>
+      </div>
+      <div class="teacher-filters">
+        <label>
+          <span>Course</span>
+          <select id="adminStudentCourseFilter">
+            <option value="all">All Courses</option>
+          </select>
+        </label>
+        <label>
+          <span>Student Name</span>
+          <input id="adminStudentNameFilter" type="text" placeholder="Type a student name">
+        </label>
+      </div>
+      <div id="adminStudentsGrid" class="admin-records">
+        <div class="teacher-card loading">
+          <h3>Loading student records...</h3>
+          <p>Please wait while we fetch performance data.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="adminCoursesSection" class="dashboard-section admin-dashboard-section">
+      <div class="dashboard-header">
+        <div>
+          <span class="dashboard-kicker">Courses</span>
+          <h2>All Courses</h2>
+          <p>See the full course catalog, including courses without current enrollments.</p>
+        </div>
+      </div>
+      <div class="teacher-filters">
+        <label>
+          <span>Course Name</span>
+          <input id="adminCourseNameFilter" type="text" placeholder="Type a course name">
+        </label>
+      </div>
+      <div id="adminCoursesGrid" class="admin-records">
+        <div class="teacher-card loading">
+          <h3>Loading courses...</h3>
+          <p>Please wait while we fetch all course records.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="adminTeachersSection" class="dashboard-section admin-dashboard-section">
+      <div class="dashboard-header">
+        <div>
+          <span class="dashboard-kicker">Teachers</span>
+          <h2>Teacher Upload Activity</h2>
+          <p>Review what courses and lectures each teacher has uploaded.</p>
+        </div>
+      </div>
+      <div class="teacher-filters">
+        <label>
+          <span>Teacher Name</span>
+          <input id="adminTeacherNameFilter" type="text" placeholder="Type a teacher name">
+        </label>
+      </div>
+      <div id="adminTeachersGrid" class="admin-records">
+        <div class="teacher-card loading">
+          <h3>Loading teacher records...</h3>
+          <p>Please wait while we fetch upload data.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/assets/js/main.js"></script>
+  <script>
+    function formatMetric(value, suffix) {
+      if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
+      return `${value}${suffix || ""}`;
+    }
+
+    function renderTopicBreakdown(topics) {
+      if (!Array.isArray(topics) || topics.length === 0) return "";
+      return `
+        <div class="performance-focus">
+          <span>Topic Attendance</span>
+          <p>${topics.map((topic) =>
+            `${topic.topic_name || "Topic"}: ${topic.attended ? "Present" : "Pending"}`
+          ).join(" | ")}</p>
+        </div>
+      `;
+    }
+
+    let studentCache = [];
+    let teacherCache = [];
+    let courseCache = [];
+
+    function renderStudents(students) {
+      const grid = document.getElementById("adminStudentsGrid");
+      if (!students.length) {
+        grid.innerHTML = `
+          <div class="performance-empty">
+            <h3>No student data found</h3>
+            <p>Student marks and attendance will appear here when records are available.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = students.map((item) => {
+        const attendance = formatMetric(item.attendance_pct, "%");
+        const score = formatMetric(item.score_pct, "%");
+        const marks =
+          item.marks_obtained !== null && item.marks_total !== null
+            ? `${item.marks_obtained} / ${item.marks_total}`
+            : "N/A";
+
+        return `
+          <article class="admin-record admin-student-record">
+            <div class="admin-record-main">
+              <div class="admin-identity">
+                <h3>${item.student_name || "Student"}</h3>
+                <p>${item.student_email || ""}</p>
+              </div>
+              <span class="performance-tag">${item.department || "No Department"}</span>
+            </div>
+            <div class="admin-course-pill">${item.course_name || "Course"}</div>
+            <div class="admin-record-metrics">
+              <div class="metric-row">
+                <span class="metric-label">Attendance</span>
+                <span class="metric-value">${attendance}</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Marks</span>
+                <span class="metric-value">${marks}</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Score</span>
+                <span class="metric-value">${score}</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Topics</span>
+                <span class="metric-value">${item.topic_attendance_text || "No topic attendance yet"}</span>
+              </div>
+            </div>
+            <div class="admin-record-notes">
+              <div class="performance-focus">
+                <span>Focus</span>
+                <p>${item.focus_area || "No focus note added yet."}</p>
+              </div>
+              ${renderTopicBreakdown(item.topic_breakdown)}
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderTeachers(teachers) {
+      const grid = document.getElementById("adminTeachersGrid");
+      if (!teachers.length) {
+        grid.innerHTML = `
+          <div class="performance-empty">
+            <h3>No teacher data found</h3>
+            <p>Teacher course uploads will appear here when records are available.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = teachers.map((teacher) => {
+        const courseList = teacher.courses_uploaded.length
+          ? teacher.courses_uploaded.map((course) => course.course_name).join(", ")
+          : "No courses uploaded yet";
+        const lectureList = teacher.lectures_uploaded.length
+          ? teacher.lectures_uploaded.map((lecture) =>
+              `${lecture.topic_name || "Lecture"} (${lecture.course_name || "Course"})`
+            ).join(" | ")
+          : "No lectures uploaded yet";
+
+        return `
+          <article class="admin-record admin-teacher-record">
+            <div class="admin-record-main">
+              <div class="admin-identity">
+                <h3>${teacher.teacher_name || "Teacher"}</h3>
+                <p>${teacher.teacher_email || ""}</p>
+              </div>
+              <span class="performance-tag">${teacher.department || "No Department"}</span>
+            </div>
+            <div class="admin-upload-stats admin-record-metrics">
+              <div class="metric-row">
+                <span class="metric-label">Courses Uploaded</span>
+                <span class="metric-value">${teacher.course_count}</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Lectures Uploaded</span>
+                <span class="metric-value">${teacher.lecture_count}</span>
+              </div>
+            </div>
+            <div class="admin-record-notes">
+              <div class="performance-focus">
+                <span>Courses</span>
+                <p>${courseList}</p>
+              </div>
+              <div class="performance-focus">
+                <span>Lectures</span>
+                <p>${lectureList}</p>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderCourses(courses) {
+      const grid = document.getElementById("adminCoursesGrid");
+      if (!courses.length) {
+        grid.innerHTML = `
+          <div class="performance-empty">
+            <h3>No course data found</h3>
+            <p>All available courses will appear here when records are available.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = courses.map((course) => `
+        <article class="admin-record admin-course-record">
+          <div class="admin-record-main">
+            <div class="admin-identity">
+              <h3>${course.course_name || "Course"}</h3>
+              <p>${course.teacher_name || "No teacher assigned yet"}</p>
+            </div>
+            <span class="performance-tag">${course.dept_name || "No Department"}</span>
+          </div>
+          <div class="admin-record-metrics">
+            <div class="metric-row">
+              <span class="metric-label">Credits</span>
+              <span class="metric-value">${course.credits ?? "N/A"}</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Topics</span>
+              <span class="metric-value">${course.topic_count ?? 0}</span>
+            </div>
+          </div>
+          <div class="admin-record-notes">
+            <div class="performance-focus">
+              <span>Course Period</span>
+              <p>${course.course_period || "Not added yet."}</p>
+            </div>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function applyStudentFilters() {
+      const courseFilter = document.getElementById("adminStudentCourseFilter");
+      const nameFilter = document.getElementById("adminStudentNameFilter");
+      const selectedCourse = courseFilter.value;
+      const nameQuery = String(nameFilter.value || "").trim().toLowerCase();
+
+      const filtered = studentCache.filter((student) => {
+        const matchesCourse = selectedCourse === "all" || student.course_name === selectedCourse;
+        const matchesName = !nameQuery || String(student.student_name || "").toLowerCase().includes(nameQuery);
+        return matchesCourse && matchesName;
+      });
+
+      renderStudents(filtered);
+    }
+
+    function applyTeacherFilters() {
+      const nameQuery = String(document.getElementById("adminTeacherNameFilter").value || "").trim().toLowerCase();
+      const filtered = teacherCache.filter((teacher) =>
+        !nameQuery || String(teacher.teacher_name || "").toLowerCase().includes(nameQuery)
+      );
+      renderTeachers(filtered);
+    }
+
+    function applyCourseFilters() {
+      const nameQuery = String(document.getElementById("adminCourseNameFilter").value || "").trim().toLowerCase();
+      const filtered = courseCache.filter((course) =>
+        !nameQuery || String(course.course_name || "").toLowerCase().includes(nameQuery)
+      );
+      renderCourses(filtered);
+    }
+
+    async function loadAdminOverview() {
+      try {
+        const meResponse = await fetch("/api/me");
+        if (!meResponse.ok) throw new Error("Not authenticated");
+        const me = await meResponse.json();
+        if (!me || String(me.role || "").toLowerCase() !== "admin") {
+          window.location.href = "/dashboard";
+          return;
+        }
+
+        const response = await fetch("/api/admin/overview");
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "Failed to load admin overview");
+
+        const summary = payload.summary || {};
+        studentCache = Array.isArray(payload.students) ? payload.students : [];
+        teacherCache = Array.isArray(payload.teachers) ? payload.teachers : [];
+        courseCache = Array.isArray(payload.courses) ? payload.courses : [];
+
+        document.getElementById("adminStudentCount").textContent = summary.student_count ?? 0;
+        document.getElementById("adminTeacherCount").textContent = summary.teacher_count ?? 0;
+        document.getElementById("adminCourseCount").textContent = summary.course_count ?? 0;
+        document.getElementById("adminAttendance").textContent = formatMetric(summary.avg_attendance_pct, "%");
+        document.getElementById("adminScore").textContent = formatMetric(summary.avg_score_pct, "%");
+        document.getElementById("adminLectureCount").textContent = summary.uploaded_lecture_count ?? 0;
+        document.getElementById("adminStatus").textContent = "Updated";
+
+        const courseFilter = document.getElementById("adminStudentCourseFilter");
+        const courseNames = Array.from(new Set(courseCache.map((course) => course.course_name).filter(Boolean)));
+        courseFilter.innerHTML = `<option value="all">All Courses</option>` +
+          courseNames.map((name) => `<option value="${name}">${name}</option>`).join("");
+
+        document.getElementById("adminStudentNameFilter").addEventListener("input", applyStudentFilters);
+        document.getElementById("adminTeacherNameFilter").addEventListener("input", applyTeacherFilters);
+        document.getElementById("adminCourseNameFilter").addEventListener("input", applyCourseFilters);
+        courseFilter.addEventListener("change", applyStudentFilters);
+
+        applyStudentFilters();
+        applyCourseFilters();
+        applyTeacherFilters();
+      } catch (error) {
+        document.getElementById("adminStatus").textContent = "Unavailable";
+        renderStudents([]);
+        renderCourses([]);
+        renderTeachers([]);
+      }
+    }
+
+    loadAdminOverview();
+  </script>
+</body>
+</html>

@@ -14,6 +14,8 @@ const COURSE_TOPIC_ATTENDANCE_TABLE = "course_topic_attendance";
 const ENROLL_TABLE = "enrollment";
 const ENROLL_REQUEST_TABLE = "enrollment_requests";
 const PERFORMANCE_TABLE = "student_performance";
+const ADMIN_EMAIL = "admin123@gmail.com";
+const ADMIN_PASSWORD = "admin@123";
 let deptColumnCache = null;
 let teacherIdAutoIncrement = null;
 let courseColumnCache = null;
@@ -1215,10 +1217,30 @@ router.post("/signup", async (req, res) => {
 
 router.post("/login", (req, res) => {
     const { username: email, password, role, department, dept_id: deptId } = req.body;
+    const normalizedEmail = email ? String(email).trim().toLowerCase() : "";
     const normalizedRole = role ? String(role).trim().toLowerCase() : "";
 
-    if (!email || !password || !normalizedRole) {
+    if (!normalizedEmail || !password || !normalizedRole) {
         return res.status(400).send("All fields are required");
+    }
+
+    if (
+      normalizedEmail === ADMIN_EMAIL &&
+      password === ADMIN_PASSWORD &&
+      normalizedRole === "admin"
+    ) {
+      req.session.userId = "admin";
+      req.session.userSource = "admin";
+      req.session.user = {
+        id: "admin",
+        username: "Administrator",
+        email: ADMIN_EMAIL,
+        phone_no: "",
+        role: "admin",
+        dept_id: null,
+        department: "Administration"
+      };
+      return res.redirect("/admin");
     }
 
     resolveDepartmentId(
@@ -1233,7 +1255,7 @@ router.post("/login", (req, res) => {
             `SELECT teacher_id, name, email, phone_no, dept_id, password
              FROM ${TEACHER_TABLE}
              WHERE email = ? AND dept_id = ?`,
-            [email, resolvedDeptId],
+            [normalizedEmail, resolvedDeptId],
             async (err, results) => {
               if (err) {
                 console.error(err);
@@ -1266,10 +1288,10 @@ router.post("/login", (req, res) => {
         }
 
         db.query(
-          `SELECT id, username, email, phone_no, role, dept_id, password
+           `SELECT id, username, email, phone_no, role, dept_id, password
            FROM ${AUTH_TABLE}
            WHERE email = ? AND role = ? AND dept_id = ?`,
-          [email, normalizedRole, resolvedDeptId],
+          [normalizedEmail, normalizedRole, resolvedDeptId],
           async (err, results) => {
             if (err) {
               console.error(err);
@@ -1305,7 +1327,18 @@ router.post("/login", (req, res) => {
 /*DAshboard*/
 router.get("/dashboard", (req, res) => {
     if (!req.session.userId) return res.redirect("/pages/login.html");
+    if (req.session.user && req.session.user.role === "admin") {
+      return res.redirect("/admin");
+    }
     res.sendFile(path.join(__dirname, "..", "..", "..", "frontend", "public", "pages", "dashboard.html"));
+});
+
+router.get("/admin", (req, res) => {
+    if (!req.session.userId) return res.redirect("/pages/login.html");
+    if (!req.session.user || req.session.user.role !== "admin") {
+      return res.redirect("/dashboard");
+    }
+    res.sendFile(path.join(__dirname, "..", "..", "..", "frontend", "public", "pages", "admin.html"));
 });
 
 router.get("/profile", (req, res) => {
@@ -1323,6 +1356,19 @@ router.get("/api/me", (req, res) => {
     }
 
     const userSource = req.session.userSource || "auth_users";
+
+    if (userSource === "admin") {
+      req.session.user = {
+        id: "admin",
+        username: "Administrator",
+        email: ADMIN_EMAIL,
+        phone_no: "",
+        role: "admin",
+        dept_id: null,
+        department: "Administration"
+      };
+      return res.json(req.session.user);
+    }
 
     if (userSource === "teacher") {
       getDeptColumns((deptColumnsErr, deptColumns) => {
@@ -1773,6 +1819,275 @@ router.get("/api/teacher/students-performance", (req, res) => {
             });
           }
         );
+      });
+    });
+  });
+});
+
+router.get("/api/admin/overview", (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  if (!req.session.user || req.session.user.role !== "admin") {
+    return res.status(403).json({ error: "Only admins can view this page" });
+  }
+
+  getCourseColumns((courseMetaErr, courseMeta) => {
+    if (courseMetaErr) {
+      console.error(courseMetaErr);
+      return res.status(500).json({ error: "Failed to load courses schema" });
+    }
+
+    getEnrollmentColumns((enrollMetaErr, enrollMeta) => {
+      if (enrollMetaErr) {
+        console.error(enrollMetaErr);
+        return res.status(500).json({ error: "Failed to load enrollment schema" });
+      }
+
+      getPerformanceColumns((perfMetaErr, perfMeta) => {
+        if (perfMetaErr) {
+          console.error(perfMetaErr);
+          return res.status(500).json({ error: "Failed to load performance schema" });
+        }
+
+        getDeptColumns((deptMetaErr, deptMeta) => {
+          if (deptMetaErr) {
+            console.error(deptMetaErr);
+            return res.status(500).json({ error: "Failed to load department schema" });
+          }
+
+          const { idCol, nameCol, teacherCol } = courseMeta;
+          const {
+            userCol,
+            courseCol,
+            attendanceCol,
+            marksObtainedCol,
+            marksTotalCol,
+            focusCol,
+            updatedCol
+          } = perfMeta;
+
+          const attendanceSelect = attendanceCol ? `p.${attendanceCol} AS attendance_pct` : "NULL AS attendance_pct";
+          const marksObtainedSelect = marksObtainedCol
+            ? `p.${marksObtainedCol} AS marks_obtained`
+            : "NULL AS marks_obtained";
+          const marksTotalSelect = marksTotalCol ? `p.${marksTotalCol} AS marks_total` : "NULL AS marks_total";
+          const focusSelect = focusCol ? `p.${focusCol} AS focus_area` : "NULL AS focus_area";
+          const updatedSelect = updatedCol ? `p.${updatedCol} AS updated_at` : "NULL AS updated_at";
+
+          db.query(
+            `SELECT u.id AS student_id, u.username AS student_name, u.email AS student_email,
+                    d.${deptMeta.nameCol} AS department,
+                    c.${idCol} AS course_id, c.${nameCol} AS course_name,
+                    ${attendanceSelect}, ${marksObtainedSelect}, ${marksTotalSelect},
+                    ${focusSelect}, ${updatedSelect}
+             FROM ${ENROLL_TABLE} e
+             JOIN ${AUTH_TABLE} u ON u.id = e.${enrollMeta.userCol}
+             LEFT JOIN ${DEPT_TABLE} d ON d.${deptMeta.idCol} = u.dept_id
+             JOIN ${COURSE_TABLE} c ON c.${idCol} = e.${enrollMeta.courseCol}
+             LEFT JOIN ${PERFORMANCE_TABLE} p
+               ON p.${userCol} = e.${enrollMeta.userCol}
+              AND p.${courseCol} = e.${enrollMeta.courseCol}
+             WHERE LOWER(COALESCE(u.role, 'student')) = 'student'
+             ORDER BY u.username ASC, c.${nameCol} ASC`,
+            (studentErr, studentRows) => {
+              if (studentErr) {
+                console.error(studentErr);
+                return res.status(500).json({ error: "Failed to load student overview" });
+              }
+
+              const pairs = (studentRows || []).map((row) => ({
+                studentId: row.student_id,
+                courseId: row.course_id
+              }));
+
+              loadTopicAttendanceForStudentCoursePairs(pairs, (topicErr, topicSummaryByPair) => {
+                if (topicErr) {
+                  console.error(topicErr);
+                  return res.status(500).json({ error: "Failed to load topic attendance" });
+                }
+
+                const students = (studentRows || []).map((row) => {
+                  const metrics = resolvePerformanceMetrics({
+                    row,
+                    userId: row.student_id,
+                    courseName: row.course_name
+                  });
+                  const pairKey = `${Number(row.student_id)}:${Number(row.course_id)}`;
+                  const topicSummary = topicSummaryByPair.get(pairKey);
+                  if (topicSummary && Number.isFinite(topicSummary.attendance_pct)) {
+                    metrics.attendance = topicSummary.attendance_pct;
+                  }
+
+                  return {
+                    student_id: row.student_id,
+                    student_name: row.student_name,
+                    student_email: row.student_email,
+                    department: row.department || "",
+                    course_id: row.course_id,
+                    course_name: row.course_name,
+                    attendance_pct: metrics.attendance,
+                    attended_topic_count: topicSummary ? topicSummary.attended_topic_count : null,
+                    topic_count: topicSummary ? topicSummary.topic_count : null,
+                    topic_attendance_text: topicSummary ? topicSummary.topic_attendance_text : null,
+                    topic_breakdown: topicSummary ? topicSummary.topic_breakdown : [],
+                    marks_obtained: metrics.marksObtained,
+                    marks_total: metrics.marksTotal,
+                    score_pct: metrics.score,
+                    focus_area: row.focus_area || null,
+                    updated_at: row.updated_at
+                  };
+                });
+
+                const teacherCourseJoin = teacherCol
+                  ? `LEFT JOIN ${COURSE_TABLE} c ON c.${teacherCol} = t.teacher_id`
+                  : `LEFT JOIN ${COURSE_TABLE} c ON 1 = 0`;
+
+                db.query(
+                  `SELECT t.teacher_id, t.name AS teacher_name, t.email AS teacher_email,
+                          d.${deptMeta.nameCol} AS department,
+                          c.${idCol} AS course_id, c.${nameCol} AS course_name,
+                          ct.topic_id, ct.topic_name, ct.video_path, ct.created_at
+                   FROM ${TEACHER_TABLE} t
+                   LEFT JOIN ${DEPT_TABLE} d ON d.${deptMeta.idCol} = t.dept_id
+                   ${teacherCourseJoin}
+                   LEFT JOIN ${COURSE_TOPIC_TABLE} ct ON ct.course_id = c.${idCol}
+                   ORDER BY t.name ASC, c.${nameCol} ASC, ct.topic_order ASC, ct.topic_id ASC`,
+                  (teacherErr, teacherRows) => {
+                    if (teacherErr) {
+                      console.error(teacherErr);
+                      return res.status(500).json({ error: "Failed to load teacher overview" });
+                    }
+
+                    const teacherMap = new Map();
+                    (teacherRows || []).forEach((row) => {
+                      const teacherId = Number(row.teacher_id);
+                      if (!teacherMap.has(teacherId)) {
+                        teacherMap.set(teacherId, {
+                          teacher_id: teacherId,
+                          teacher_name: row.teacher_name,
+                          teacher_email: row.teacher_email,
+                          department: row.department || "",
+                          courses_uploaded: [],
+                          lectures_uploaded: []
+                        });
+                      }
+
+                      const teacher = teacherMap.get(teacherId);
+                      if (row.course_id && !teacher.courses_uploaded.some((course) => course.course_id === row.course_id)) {
+                        teacher.courses_uploaded.push({
+                          course_id: row.course_id,
+                          course_name: row.course_name
+                        });
+                      }
+
+                      if (row.topic_id) {
+                        teacher.lectures_uploaded.push({
+                          topic_id: row.topic_id,
+                          topic_name: row.topic_name,
+                          course_id: row.course_id,
+                          course_name: row.course_name,
+                          video_path: row.video_path,
+                          created_at: row.created_at
+                        });
+                      }
+                    });
+
+                    const teachers = Array.from(teacherMap.values()).map((teacher) => ({
+                      ...teacher,
+                      course_count: teacher.courses_uploaded.length,
+                      lecture_count: teacher.lectures_uploaded.length
+                    }));
+
+                    const uniqueStudents = new Set(students.map((student) => student.student_id)).size;
+                    const attendanceValues = students
+                      .map((student) => student.attendance_pct)
+                      .filter((value) => Number.isFinite(value));
+                    const scoreValues = students
+                      .map((student) => student.score_pct)
+                      .filter((value) => Number.isFinite(value));
+
+                    const avgAttendance = attendanceValues.length
+                      ? Math.round(
+                          (attendanceValues.reduce((sum, value) => sum + value, 0) / attendanceValues.length) * 10
+                        ) / 10
+                      : null;
+                    const avgScore = scoreValues.length
+                      ? Math.round(
+                          (scoreValues.reduce((sum, value) => sum + value, 0) / scoreValues.length) * 10
+                        ) / 10
+                      : null;
+
+                    const deptSelect = courseMeta.deptCol
+                      ? `d.${deptMeta.nameCol} AS dept_name`
+                      : "NULL AS dept_name";
+                    const teacherSelect = teacherCol
+                      ? "t.name AS teacher_name"
+                      : "NULL AS teacher_name";
+                    const teacherJoin = teacherCol
+                      ? `LEFT JOIN ${TEACHER_TABLE} t ON t.teacher_id = c.${teacherCol}`
+                      : `LEFT JOIN ${TEACHER_TABLE} t ON 1 = 0`;
+                    const deptJoin = courseMeta.deptCol
+                      ? `LEFT JOIN ${DEPT_TABLE} d ON d.${deptMeta.idCol} = c.${courseMeta.deptCol}`
+                      : `LEFT JOIN ${DEPT_TABLE} d ON 1 = 0`;
+                    const periodSelect = courseMeta.periodCol
+                      ? `c.${courseMeta.periodCol} AS course_period`
+                      : "NULL AS course_period";
+                    const creditsSelect = courseMeta.creditsCol
+                      ? `c.${courseMeta.creditsCol} AS credits`
+                      : "NULL AS credits";
+
+                    db.query(
+                      `SELECT c.${idCol} AS course_id, c.${nameCol} AS course_name,
+                              ${deptSelect}, ${teacherSelect}, ${periodSelect}, ${creditsSelect},
+                              COALESCE(topic_summary.topic_count, 0) AS topic_count
+                       FROM ${COURSE_TABLE} c
+                       ${deptJoin}
+                       ${teacherJoin}
+                       LEFT JOIN (
+                         SELECT course_id, COUNT(*) AS topic_count
+                         FROM ${COURSE_TOPIC_TABLE}
+                         GROUP BY course_id
+                       ) topic_summary ON topic_summary.course_id = c.${idCol}
+                       ORDER BY c.${nameCol} ASC`,
+                      (courseErr, courseRows) => {
+                        if (courseErr) {
+                          console.error(courseErr);
+                          return res.status(500).json({ error: "Failed to load course overview" });
+                        }
+
+                        const courses = (courseRows || []).map((course) => ({
+                          course_id: course.course_id,
+                          course_name: course.course_name,
+                          dept_name: course.dept_name || "",
+                          teacher_name: course.teacher_name || "",
+                          course_period: course.course_period || "",
+                          credits: course.credits,
+                          topic_count: Number(course.topic_count) || 0
+                        }));
+
+                        return res.json({
+                          summary: {
+                            student_count: uniqueStudents,
+                            teacher_count: teachers.length,
+                            course_count: courses.length,
+                            avg_attendance_pct: avgAttendance,
+                            avg_score_pct: avgScore,
+                            uploaded_lecture_count: teachers.reduce((sum, teacher) => sum + teacher.lecture_count, 0)
+                          },
+                          students,
+                          teachers,
+                          courses
+                        });
+                      }
+                    );
+                  }
+                );
+              });
+            }
+          );
+        });
       });
     });
   });

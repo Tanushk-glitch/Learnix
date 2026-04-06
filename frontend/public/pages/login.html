@@ -47,12 +47,13 @@
         <form id="loginForm" class="demo-form" action="/login" method="post">
             <input type="email" name="username" placeholder="Email Address" required>
             <input type="password" name="password" placeholder="Password" required>
-            <select name="role" required>
+            <select id="loginRole" name="role" required>
                 <option value="" disabled selected>Select Role</option>
                 <option value="student">Student</option>
                 <option value="teacher">Teacher</option>
+                <option value="admin">Admin</option>
             </select>
-            <input type="text" name="department" placeholder="Department" required>
+            <input id="loginDepartment" type="text" name="department" placeholder="Department" required>
             <button type="submit" class="get-started-free" style="flex-basis:100%; width:fit-content; margin:14px auto 0;">Log in</button>
         </form>
 
@@ -67,5 +68,24 @@
 </footer>
 
 <script src="/assets/js/main.js"></script>
+<script>
+  const roleField = document.getElementById("loginRole");
+  const departmentField = document.getElementById("loginDepartment");
+
+  function syncDepartmentRequirement() {
+    const isAdmin = roleField && roleField.value === "admin";
+    departmentField.required = !isAdmin;
+    departmentField.disabled = isAdmin;
+    departmentField.placeholder = isAdmin ? "Department not required for admin" : "Department";
+    if (isAdmin) {
+      departmentField.value = "";
+    }
+  }
+
+  if (roleField && departmentField) {
+    roleField.addEventListener("change", syncDepartmentRequirement);
+    syncDepartmentRequirement();
+  }
+</script>
 </body>
 </html>
