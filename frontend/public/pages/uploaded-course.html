@@ -184,6 +184,47 @@
       margin-bottom: 8px;
     }
 
+    .quiz-answer-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .quiz-answer-input {
+      flex: 1 1 240px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(8, 17, 32, 0.9);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+    }
+
+    .quiz-answer-input::placeholder {
+      color: var(--muted);
+    }
+
+    .quiz-answer-input:focus {
+      outline: 1px solid rgba(56, 189, 248, 0.55);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    .quiz-feedback {
+      min-height: 24px;
+      margin-top: 12px;
+      color: #bae6fd;
+    }
+
+    .quiz-feedback.error {
+      color: var(--danger);
+    }
+
+    .quiz-progress {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
     .topics-heading {
       margin: 0 0 12px;
       font-size: 1.05rem;
@@ -303,10 +344,20 @@
       <div id="quiz-section">
         <h2 class="topics-heading">Quiz Questions</h2>
         <div id="questions-content">Questions will appear here after generation.</div>
+        <div id="quiz-interaction" class="question-card" hidden>
+          <strong id="quiz-question-text">Question will appear here.</strong>
+          <div id="quiz-progress-text" class="quiz-progress"></div>
+          <div class="quiz-answer-row">
+            <input id="quiz-answer-input" class="quiz-answer-input" type="text" placeholder="Enter your answer">
+            <button id="quiz-submit-btn" class="primary" type="button">Submit Answer</button>
+          </div>
+          <div id="quiz-feedback" class="quiz-feedback"></div>
+        </div>
       </div>
     </div>
   </section>
 
+  <script src="/assets/js/quiz-utils.js"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const courseId = Number.parseInt(params.get('courseId') || '', 10);
@@ -325,6 +376,12 @@
     const topicsStatus = document.getElementById('topics-status');
     const questionsContent = document.getElementById('questions-content');
     const quizSection = document.getElementById('quiz-section');
+    const quizInteraction = document.getElementById('quiz-interaction');
+    const quizQuestionText = document.getElementById('quiz-question-text');
+    const quizProgressText = document.getElementById('quiz-progress-text');
+    const quizAnswerInput = document.getElementById('quiz-answer-input');
+    const quizSubmitBtn = document.getElementById('quiz-submit-btn');
+    const quizFeedback = document.getElementById('quiz-feedback');
     const generateBtn = document.getElementById('generate-btn');
     const attendanceBtn = document.getElementById('mark-attendance-btn');
     const attendanceStatus = document.getElementById('attendance-status');
@@ -333,6 +390,10 @@
     let availableTopics = [];
     let currentTopic = null;
     let currentVideoUrl = videoUrl;
+    let quizQuestions = [];
+    let currentQuizQuestionIndex = 0;
+    let quizAttempts = 0;
+    let totalQuizCorrect = 0;
 
     titleNode.textContent = courseName;
     subtitleNode.textContent = isEnrolled
@@ -459,23 +520,99 @@
     }
     refreshAttendanceUi();
 
+    function displayQuizQuestion() {
+      if (!quizInteraction) {
+        return;
+      }
+
+      if (!Array.isArray(quizQuestions) || quizQuestions.length === 0) {
+        quizInteraction.hidden = true;
+        return;
+      }
+
+      quizInteraction.hidden = false;
+      quizAnswerInput.disabled = false;
+      quizSubmitBtn.disabled = false;
+      quizAnswerInput.value = '';
+      quizFeedback.textContent = '';
+      quizFeedback.className = 'quiz-feedback';
+
+      if (currentQuizQuestionIndex >= quizQuestions.length) {
+        quizQuestionText.textContent = `Quiz completed! You got ${totalQuizCorrect} out of ${quizQuestions.length} questions accepted.`;
+        quizProgressText.textContent = '';
+        quizAnswerInput.disabled = true;
+        quizSubmitBtn.disabled = true;
+        questionsContent.textContent = 'All quiz questions completed.';
+        return;
+      }
+
+      const currentQuestion = quizQuestions[currentQuizQuestionIndex];
+      quizQuestionText.textContent = `Q${currentQuizQuestionIndex + 1}. ${currentQuestion.question || 'Question unavailable'}`;
+      quizProgressText.textContent = `Question ${currentQuizQuestionIndex + 1} of ${quizQuestions.length}`;
+      questionsContent.textContent = `${quizQuestions.length} quiz questions ready. Students can answer in their own words.`;
+      quizAnswerInput.focus();
+    }
+
     function renderQuestions(questions) {
       if (!isEnrolled) {
         questionsContent.textContent = 'Quiz questions unlock after enrollment.';
+        quizInteraction.hidden = true;
         return;
       }
 
       if (!Array.isArray(questions) || questions.length === 0) {
         questionsContent.textContent = 'No quiz questions were generated for this video yet.';
+        quizQuestions = [];
+        quizInteraction.hidden = true;
         return;
       }
 
-      questionsContent.innerHTML = questions.map((item, index) => `
-        <div class="question-card">
-          <strong>Q${index + 1}. ${item.question || 'Question unavailable'}</strong>
-          <div>${item.answer || 'Answer unavailable'}</div>
-        </div>
-      `).join('');
+      quizQuestions = questions.map(item => ({
+        question: item.question || 'Question unavailable',
+        answer: item.answer || ''
+      }));
+      currentQuizQuestionIndex = 0;
+      quizAttempts = 0;
+      totalQuizCorrect = 0;
+      displayQuizQuestion();
+    }
+
+    function checkQuizAnswer() {
+      if (!quizQuestions.length || currentQuizQuestionIndex >= quizQuestions.length) {
+        return;
+      }
+
+      const userAnswer = quizAnswerInput.value.trim();
+      const correctAnswer = quizQuestions[currentQuizQuestionIndex].answer;
+
+      if (!userAnswer) {
+        quizFeedback.textContent = 'Enter your answer before submitting.';
+        quizFeedback.className = 'quiz-feedback error';
+        return;
+      }
+
+      if (window.LearnixQuizUtils.isAnswerSimilar(userAnswer, correctAnswer)) {
+        quizFeedback.textContent = 'Answer accepted. Moving to the next question.';
+        quizFeedback.className = 'quiz-feedback';
+        totalQuizCorrect += 1;
+        currentQuizQuestionIndex += 1;
+        quizAttempts = 0;
+        setTimeout(displayQuizQuestion, 1200);
+        return;
+      }
+
+      quizAttempts += 1;
+      if (quizAttempts >= 3) {
+        quizFeedback.textContent = 'Answer not matched. Moving to the next question.';
+        quizFeedback.className = 'quiz-feedback error';
+        currentQuizQuestionIndex += 1;
+        quizAttempts = 0;
+        setTimeout(displayQuizQuestion, 1800);
+        return;
+      }
+
+      quizFeedback.textContent = `Not quite matched yet (${quizAttempts}/3). Try again with similar meaning.`;
+      quizFeedback.className = 'quiz-feedback error';
     }
 
     async function generateSummary() {
@@ -489,6 +626,11 @@
         : 'Generating summary...';
       summaryStatus.className = 'status';
       summaryContent.textContent = 'Reading the uploaded course details and preparing the summary...';
+      questionsContent.textContent = isEnrolled ? 'Generating quiz questions...' : 'Quiz questions unlock after enrollment.';
+      quizQuestions = [];
+      if (quizInteraction) {
+        quizInteraction.hidden = true;
+      }
       if (isEnrolled) {
         questionsContent.textContent = 'Generating quiz questions...';
       }
@@ -521,6 +663,18 @@
       } finally {
         generateBtn.disabled = false;
       }
+    }
+
+    if (quizSubmitBtn) {
+      quizSubmitBtn.addEventListener('click', checkQuizAnswer);
+    }
+
+    if (quizAnswerInput) {
+      quizAnswerInput.addEventListener('keypress', function (event) {
+        if (event.key === 'Enter') {
+          checkQuizAnswer();
+        }
+      });
     }
 
     generateBtn.addEventListener('click', generateSummary);

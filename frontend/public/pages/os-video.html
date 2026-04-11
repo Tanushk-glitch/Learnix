@@ -548,10 +548,16 @@
   }
 
   function checkAnswer() {
-    const userAnswer = answerInput.value.trim().toLowerCase();
-    const correctAnswer = questions[currentQuestionIndex].answer.toLowerCase();
+    const userAnswer = answerInput.value.trim();
+    const correctAnswer = questions[currentQuestionIndex].answer;
 
-    if (userAnswer === correctAnswer) {
+    if (!userAnswer) {
+      feedback.textContent = 'Enter your answer before submitting.';
+      feedback.className = 'feedback wrong';
+      return;
+    }
+
+    if (window.LearnixQuizUtils.isAnswerSimilar(userAnswer, correctAnswer)) {
       feedback.textContent = "Correct! Moving to next question.";
       feedback.className = 'feedback';
       totalCorrect++;
@@ -560,12 +566,12 @@
     } else {
       attempts++;
       if (attempts >= 3) {
-        feedback.textContent = `Wrong answer. The correct answer is: ${questions[currentQuestionIndex].answer}. Moving to next question.`;
+        feedback.textContent = 'Answer not matched. Moving to the next question.';
         feedback.className = 'feedback wrong';
         currentQuestionIndex++;
-        setTimeout(displayQuestion, 3000); // Longer delay to show answer
+        setTimeout(displayQuestion, 2000);
       } else {
-        feedback.textContent = `Wrong answer (${attempts}/3). Try again.`;
+        feedback.textContent = `Not quite matched yet (${attempts}/3). Try again with similar meaning.`;
         feedback.className = 'feedback wrong';
       }
     }
@@ -589,6 +595,7 @@
   }
 </script>
 
+<script src="/assets/js/quiz-utils.js"></script>
 <script>
   if (!localStorage.getItem('learnix-theme')) {
     localStorage.setItem('learnix-theme', 'dark');
@@ -597,5 +604,6 @@
 <script src="/assets/js/main.js"></script>
 </body>
 </html>
+
 
 
