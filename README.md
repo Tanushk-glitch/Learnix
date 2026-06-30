@@ -6,9 +6,9 @@ Learnix is an educational platform for learning programming and technical skills
 
 ## Technologies Used
 
-* **Frontend:** HTML, CSS, JavaScript
-* **Backend:** Node.js, Express.js
-* **Database:** MySQL
+* Frontend: HTML, CSS, JavaScript
+* Backend: Node.js, Express.js
+* Database: MySQL
 
 ## Project Structure
 
